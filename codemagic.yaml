@@ -1,0 +1,43 @@
+# Codemagic: build Audiobook Studio for iOS and upload to TestFlight.
+# Uses the same App Store Connect integration as your other apps — change
+# "YOUR_ASC_KEY_NAME" to the integration name you already set up in Codemagic.
+workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: YOUR_ASC_KEY_NAME
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.stevenwilliams.audiobookstudio
+      node: 20
+      xcode: latest
+    scripts:
+      - name: Install packages
+        script: npm install
+      - name: Add iOS platform (first build only)
+        script: |
+          if [ ! -d ios ]; then npx cap add ios; fi
+      - name: Copy web app into iOS project
+        script: npx cap sync ios
+      - name: Set up signing
+        script: xcode-project use-profiles
+      - name: Set build number
+        script: |
+          cd ios/App
+          agvtool new-version -all $BUILD_NUMBER
+      - name: Build IPA
+        script: |
+          if [ -d ios/App/App.xcworkspace ]; then
+            xcode-project build-ipa --workspace ios/App/App.xcworkspace --scheme App
+          else
+            xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+          fi
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
