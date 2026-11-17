@@ -158,7 +158,7 @@ html.dark .seg button.on { background: var(--accent); color: var(--accent-ink); 
 .cw { border-radius: 5px; padding: 1px 2px; margin: 0 -2px; cursor: pointer; }
 .cw.now { background: var(--accent); color: var(--accent-ink); }
 .cwho { font-size: 13px; letter-spacing: .02em; }
-.ccbar { max-height: 92px; overflow: auto; padding: 8px 12px; background: var(--panel); border-top: 1px solid var(--line); font-size: 17px; line-height: 1.5; }
+.ccbar { position: relative; max-height: 104px; overflow: auto; padding: 8px 12px; background: var(--panel); border-top: 1px solid var(--line); font-size: 17px; line-height: 1.5; }
 .ccbar.dim .cseg { opacity: .55; }
 .ccbar .cseg { margin-bottom: 4px; }
 .t-acts .cc-btn { flex: none; font-weight: 800; letter-spacing: .04em; }
@@ -167,3 +167,25 @@ html.dark .seg button.on { background: var(--accent); color: var(--accent-ink); 
 /* Appearance picker */
 .theme-seg { margin-top: 4px; }
 .top .ib.gear { margin-left: auto; }
+
+/* Speed reader */
+.cap-seg { margin-top: 10px; }
+.rsvp-box { margin-top: 10px; padding: 4px 12px; border-radius: var(--r-in); background: var(--panel2); border: 1px solid var(--in-bd); cursor: pointer; }
+.rsvp { display: flex; flex-direction: column; gap: 4px; padding: 6px 0 8px; }
+.rsvp-who { text-align: center; font-size: 12px; font-weight: 700; min-height: 16px; color: var(--muted); }
+.rsvp-line { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; font-size: 40px; font-weight: 600; line-height: 1.25; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); letter-spacing: .01em; }
+.rsvp-line::before, .rsvp-line::after { content: ""; position: absolute; left: 50%; width: 2px; height: 9px; margin-left: -1px; background: var(--muted); }
+.rsvp-line::before { top: 0; } .rsvp-line::after { bottom: 0; }
+.rp { text-align: right; white-space: pre; overflow: hidden; }
+.rq { text-align: left; white-space: pre; overflow: hidden; }
+.ro { color: var(--danger); }
+.rsvp.dim .rsvp-line { opacity: .38; }
+.rsvp-bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.rsvp-bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.ccmode { position: absolute; top: 6px; right: 8px; z-index: 1; margin: 0; padding: 2px; gap: 2px; grid-template-columns: repeat(2, auto); }
+.ccmode button { min-height: 26px; padding: 0 10px; font-size: 12px; }
+.ccbar #ccb { padding-right: 112px; }
+.ccbar.rsvp-mode { max-height: none; overflow: visible; }
+.ccbar.rsvp-mode #ccb { padding-right: 0; }
+.ccbar.rsvp-mode .rsvp-line { font-size: 34px; padding: 8px 0; }
+.ccbar.rsvp-mode .rsvp-who { text-align: left; }

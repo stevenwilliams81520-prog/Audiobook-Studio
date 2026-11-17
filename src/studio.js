@@ -105,7 +105,10 @@ const Studio = (() => {
         <span id="busy" class="small muted"></span>
       </div>
       <div class="tl" id="tl"></div>
-      <div class="ccbar ${S.cc ? '' : 'hidden'}" id="cc"></div>
+      <div class="ccbar ${S.cc ? '' : 'hidden'} ${S.ccMode === 'rsvp' ? 'rsvp-mode' : ''}" id="cc">
+        <div class="ccmode seg" role="radiogroup" aria-label="Word display">${[['text', 'Text'], ['rsvp', 'Speed']].map(([k, l]) => `<button type="button" role="radio" data-ccm="${k}" aria-checked="${S.ccMode === k}" class="${S.ccMode === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div id="ccb"></div>
+      </div>
       <div class="insp" id="insp"></div>
       <div class="dock">
         <span class="time ptime">${fmtT(S.playhead)}</span>
@@ -119,7 +122,16 @@ const Studio = (() => {
         </div>
       </div>`;
     main.onclick = onTransport;
-    $('#cc').onclick = e => { const w = e.target.closest('.cw'); if (!w) return; e.stopPropagation(); const was = Player.playing; Player.stop(); S.playhead = +w.dataset.s + 0.001; updatePlayhead(true); if (was) Player.play().then(updateTransport); };
+    $('#cc').onclick = e => {
+      const m = e.target.closest('[data-ccm]');
+      if (m) {
+        e.stopPropagation(); S.ccMode = m.dataset.ccm; try { localStorage.setItem('abs_ccmode', S.ccMode); } catch {}
+        $('#cc').classList.toggle('rsvp-mode', S.ccMode === 'rsvp');
+        $('#cc').querySelectorAll('[data-ccm]').forEach(x => { const on = x.dataset.ccm === S.ccMode; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+        ccKey = null; updateCaptions(); return;
+      }
+      if (S.ccMode === 'rsvp' && e.target.closest('.rsvp')) { e.stopPropagation(); if (Player.playing) Player.stop(); else Player.play().then(updateTransport); updateTransport(); return; }
+      const w = e.target.closest('.cw'); if (!w) return; e.stopPropagation(); const was = Player.playing; Player.stop(); S.playhead = +w.dataset.s + 0.001; updatePlayhead(true); if (was) Player.play().then(updateTransport); };
     ccKey = null;
     $('#impfile').onchange = e => importAudio([...e.target.files]);
     renderTimeline();
@@ -185,23 +197,30 @@ const Studio = (() => {
     });
   }
 
-  let ccKey = null;
+  let ccKey = null, ccList = null;
   function updateCaptions() {
-    const box = $('#cc'); if (!box || !S.cc) return;
+    const bar = $('#cc'), box = $('#ccb'); if (!box || !S.cc) return;
     const ch = chapter(), t = S.playhead, tracks = Mixer.audibleTracks(ch);
     const tts = ch.clips.filter(c => c.kind === 'tts' && tracks.has(c.trackId) && c.audioId).sort((a, b) => a.start - b.start);
+    const segOf = c => {
+      const g = c.genDur || (c.dur + (c.offset || 0)), base = c.start - (c.offset || 0);
+      const tr = trackById(c.trackId), cast = castById(c.castId);
+      return { text: c.text, s: base + (c.vs || 0), e: base + (c.ve || g), who: S.project.cast.length > 1 ? cast.name : '', color: tr && tr.color };
+    };
+    if (S.ccMode === 'rsvp') {
+      const key = 'rsvp:' + tts.map(c => c.id + c.start + c.dur).join();
+      if (key !== ccKey) { ccKey = key; ccList = Captions.flat(tts.map(segOf)).sort((a, b) => a.s - b.s); box.innerHTML = Captions.rsvpHtml(); bar.classList.remove('dim'); }
+      Captions.rsvp(box, ccList, t, 0, Mixer.chapterLength(ch));
+      return;
+    }
     let act = tts.filter(c => t >= c.start && t < c.start + c.dur);
     let upcoming = false;
     if (!act.length) { const nx = tts.find(c => c.start > t); if (nx) { act = [nx]; upcoming = true; } else { const pv = tts.filter(c => c.start + c.dur <= t).pop(); if (pv) act = [pv]; } }
     const key = act.map(c => c.id).join() + (upcoming ? '~' : '');
     if (key !== ccKey) {
       ccKey = key;
-      box.classList.toggle('dim', upcoming);
-      box.innerHTML = act.length ? Captions.html(act.map(c => {
-        const g = c.genDur || (c.dur + (c.offset || 0)), base = c.start - (c.offset || 0);
-        const tr = trackById(c.trackId), cast = castById(c.castId);
-        return { text: c.text, s: base + (c.vs || 0), e: base + (c.ve || g), who: S.project.cast.length > 1 ? cast.name : '', color: tr && tr.color };
-      })) : '<p class="cseg muted small">Words appear here while the chapter plays.</p>';
+      bar.classList.toggle('dim', upcoming);
+      box.innerHTML = act.length ? Captions.html(act.map(segOf)) : '<p class="cseg muted small">Words appear here while the chapter plays.</p>';
     }
     Captions.highlight(box, t);
   }

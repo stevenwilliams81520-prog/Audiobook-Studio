@@ -4,9 +4,10 @@ const Quick = (() => {
     get() { try { return JSON.parse(localStorage.getItem('abs_quick') || '{}'); } catch { return {}; } },
     set(v) { try { localStorage.setItem('abs_quick', JSON.stringify(v)); } catch {} }
   };
-  const st = Object.assign({ text: '', voice: 'bm_george', speed: 1, fmt: 'mp3', bitrate: 96, name: '', engine: 'auto', open: true, follow: true }, store.get());
+  const st = Object.assign({ text: '', voice: 'bm_george', speed: 1, fmt: 'mp3', bitrate: 96, name: '', engine: 'auto', open: true, follow: true, capMode: '' }, store.get());
+  if (!st.capMode) st.capMode = st.follow === false ? 'off' : 'text';
   let result = null; // { blob, url, name, secs }
-  const persist = () => store.set({ text: st.text, voice: st.voice, speed: st.speed, fmt: st.fmt, bitrate: st.bitrate, name: st.name, engine: st.engine, open: st.open, follow: st.follow });
+  const persist = () => store.set({ text: st.text, voice: st.voice, speed: st.speed, fmt: st.fmt, bitrate: st.bitrate, name: st.name, engine: st.engine, open: st.open, capMode: st.capMode });
   const QFMT = { mp3: 'MP3', m4a: 'M4A', wav: 'WAV' };
 
   function html() {
@@ -34,9 +35,11 @@ const Quick = (() => {
     return `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
       <div class="small muted"><b style="color:var(--ink)">${esc(result.name)}</b> · ${fmtLong(result.secs)} · ${(result.blob.size / 1024 / 1024).toFixed(2)} MB</div>
       <audio controls playsinline src="${result.url}" id="q-audio" style="width:100%;margin-top:8px"></audio>
-      <div class="captions ${st.follow ? '' : 'hidden'}" id="q-cap" aria-live="off">${Captions.html(result.segs)}</div>
+      <div class="seg cap-seg" role="radiogroup" aria-label="Show words while playing">${[['off', 'No words'], ['text', 'Text'], ['rsvp', 'Speed reader']].map(([k, l]) => `<button type="button" role="radio" data-qc="${k}" aria-checked="${st.capMode === k}" class="${st.capMode === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="captions ${st.capMode === 'text' ? '' : 'hidden'}" id="q-cap" aria-live="off">${Captions.html(result.segs)}</div>
+      <div class="rsvp-box ${st.capMode === 'rsvp' ? '' : 'hidden'}" id="q-rsvp">${Captions.rsvpHtml()}</div>
       <div class="btns full"><button class="btn p" data-q="save">Save / Share</button><button class="btn" data-q="toproject">Make into project</button></div>
-      <div class="btns full"><button class="btn sm" data-q="follow" aria-pressed="${st.follow}">${st.follow ? 'Hide words' : 'Show words while playing'}</button><button class="btn sm" data-q="srt">Save words (.srt)</button></div>
+      <div class="btns full"><button class="btn sm" data-q="srt">Save words (.srt)</button></div>
     </div>`;
   }
 
@@ -51,13 +54,20 @@ const Quick = (() => {
     attachCaptions(root);
   }
   function attachCaptions(root) {
-    const a = $('#q-audio', root), box = $('#q-cap', root);
+    const a = $('#q-audio', root), box = $('#q-cap', root), rb = $('#q-rsvp', root);
     if (!a || !box) return;
+    const list = Captions.flat(result.segs);
     let raf = 0;
-    const loop = () => { Captions.highlight(box, a.currentTime); if (!a.paused) raf = requestAnimationFrame(loop); };
+    const show = () => {
+      if (st.capMode === 'text') Captions.highlight(box, a.currentTime);
+      else if (st.capMode === 'rsvp') Captions.rsvp(rb, list, a.currentTime, 0, a.duration || result.secs);
+    };
+    const loop = () => { show(); if (!a.paused) raf = requestAnimationFrame(loop); };
     a.onplay = () => { cancelAnimationFrame(raf); loop(); };
-    a.onseeked = a.ontimeupdate = () => Captions.highlight(box, a.currentTime);
-    box.onclick = e => { const w = e.target.closest('.cw'); if (w) { a.currentTime = +w.dataset.s + 0.001; Captions.highlight(box, a.currentTime); } };
+    a.onseeked = a.ontimeupdate = show;
+    box.onclick = e => { const w = e.target.closest('.cw'); if (w) { a.currentTime = +w.dataset.s + 0.001; show(); } };
+    rb.onclick = () => { if (a.paused) a.play().catch(() => {}); else a.pause(); };
+    show();
   }
 
   async function onClick(e, root) {
@@ -66,6 +76,15 @@ const Quick = (() => {
       st.fmt = f.dataset.qf; persist();
       root.querySelectorAll('[data-qf]').forEach(x => { const on = x.dataset.qf === st.fmt; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
       const br = $('#q-br', root); if (br) br.disabled = st.fmt === 'wav';
+      return true;
+    }
+    const qc = e.target.closest('[data-qc]');
+    if (qc) {
+      st.capMode = qc.dataset.qc; persist();
+      root.querySelectorAll('[data-qc]').forEach(x => { const on = x.dataset.qc === st.capMode; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+      $('#q-cap', root).classList.toggle('hidden', st.capMode !== 'text');
+      $('#q-rsvp', root).classList.toggle('hidden', st.capMode !== 'rsvp');
+      const a = $('#q-audio', root); if (a) a.ontimeupdate && a.ontimeupdate();
       return true;
     }
     const b = e.target.closest('[data-q]'); if (!b) return false;
@@ -82,12 +101,6 @@ const Quick = (() => {
         b.disabled = false; b.textContent = old; break;
       }
       case 'make': await make(root); break;
-      case 'follow': {
-        st.follow = !st.follow; persist();
-        $('#q-cap', root).classList.toggle('hidden', !st.follow);
-        b.textContent = st.follow ? 'Hide words' : 'Show words while playing'; b.setAttribute('aria-pressed', st.follow);
-        break;
-      }
       case 'srt': if (result) await deliver([{ blob: new Blob([Captions.srt(result.segs)], { type: 'text/plain' }), name: result.name.replace(/\.[^.]+$/, '.srt') }], 'text/plain'); break;
       case 'save': if (result) await deliver([{ blob: result.blob, name: result.name }], result.blob.type); break;
       case 'toproject': {

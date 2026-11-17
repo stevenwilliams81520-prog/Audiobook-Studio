@@ -29,6 +29,7 @@ const S = {
   view: 'home', tab: 'script', project: null, chapterId: null,
   sel: null, selTrack: null, pps: 30, playhead: 0, undo: [], redo: [],
   cc: (() => { try { return localStorage.getItem('abs_cc') !== '0'; } catch { return true; } })(),
+  ccMode: (() => { try { return localStorage.getItem('abs_ccmode') || 'text'; } catch { return 'text'; } })(),
 };
 const chapter = () => S.project && (S.project.chapters.find(c => c.id === S.chapterId) || S.project.chapters[0]);
 const castById = id => S.project.cast.find(c => c.id === id) || S.project.cast[0];

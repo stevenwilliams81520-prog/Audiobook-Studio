@@ -44,5 +44,34 @@ const Captions = (() => {
     const ts = t => { const ms = Math.round(t * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, s = Math.floor(ms / 1000) % 60; return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms % 1000).padStart(3, '0')}`; };
     return segs.map((g, i) => `${i + 1}\n${ts(g.s)} --> ${ts(g.e)}\n${g.who ? g.who + ': ' : ''}${g.text}\n`).join('\n');
   }
-  return { speechBounds, words, html, highlight, srt };
+  /* ---- Speed reader (one word at a time, focus letter on a fixed point) ---- */
+  function flat(segs) { return segs.flatMap(g => words(g.text, g.s, g.e).map(x => Object.assign(x, { who: g.who, color: g.color }))); }
+  function focusIndex(w) {
+    const lead = w.length - w.replace(/^[^\p{L}\p{N}]+/u, '').length;
+    const L = w.replace(/^[^\p{L}\p{N}]+/u, '').replace(/[^\p{L}\p{N}]+$/u, '').length;
+    return Math.min(w.length - 1, lead + (L <= 1 ? 0 : L <= 5 ? 1 : L <= 9 ? 2 : L <= 13 ? 3 : 4));
+  }
+  function rsvpHtml() {
+    return `<div class="rsvp"><div class="rsvp-who"></div><div class="rsvp-line" aria-live="off"><span class="rp"></span><span class="ro"></span><span class="rq"></span></div><div class="rsvp-bar"><i></i></div></div>`;
+  }
+  function rsvp(box, list, t, t0, t1) {
+    const el = box && box.querySelector('.rsvp'); if (!el || !list) return;
+    let i = -1, lo = 0, hi = list.length - 1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (list[m].s <= t) { i = m; lo = m + 1; } else hi = m - 1; }
+    const live = i >= 0 && t < list[i].e;
+    const show = i >= 0 && (live || t - list[i].e < 1.2) ? i : (i < 0 && list.length ? 0 : -1);
+    const dim = !live;
+    if (el._i !== show || el._d !== dim) {
+      el._i = show; el._d = dim;
+      el.classList.toggle('dim', dim);
+      const x = list[show];
+      const [rp, ro, rq] = el.querySelectorAll('.rp,.ro,.rq');
+      if (!x) { rp.textContent = ro.textContent = rq.textContent = ''; }
+      else { const w = x.w, k = focusIndex(w), ch = Array.from(w); const kk = Array.from(w.slice(0, k)).length; rp.textContent = ch.slice(0, kk).join(''); ro.textContent = ch[kk] || ''; rq.textContent = ch.slice(kk + 1).join(''); }
+      const who = el.querySelector('.rsvp-who'); who.textContent = x && x.who ? x.who : ''; who.style.color = x && x.color ? x.color : '';
+    }
+    const span = Math.max(0.001, (t1 == null ? (list.length ? list[list.length - 1].e : 1) : t1) - (t0 || 0));
+    el.querySelector('.rsvp-bar i').style.width = Math.max(0, Math.min(1, (t - (t0 || 0)) / span)) * 100 + '%';
+  }
+  return { speechBounds, words, html, highlight, srt, flat, rsvpHtml, rsvp, focusIndex };
 })();
