@@ -4,60 +4,72 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
 <title>Audiobook Studio</title>
 <style>
+/* Light = "Bright", dark = "Studio Dark" (follows the iPhone's appearance setting) */
 :root {
-  --bg: #f4f2ed; --panel: #ffffff; --panel2: #f9f8f5; --ink: #1c1c1f; --muted: #6d6d75; --line: #e0dcd2;
-  --accent: #3555c9; --accent-ink: #fff; --gold: #b8892a; --danger: #c0392b; --ok: #24854a;
-  --lane: #ecebe6; --lane2: #e6e4de; --hdr: #faf9f6; --ph: #e0453a;
+  --bg: #f2f2f7; --panel: #ffffff; --panel2: #f2f2f7; --ink: #111114; --muted: #6b6b75; --line: #e3e3ea;
+  --accent: #5b4cf0; --accent-ink: #ffffff; --acc-soft: #ece9ff; --gold: #c47f12; --danger: #d6342c; --ok: #13866f;
+  --lane: #f7f7fa; --lane2: #efeff4; --hdr: #ffffff; --ph: #5b4cf0; --tabs: #ffffff; --top: #f2f2f7;
+  --card-bd: transparent; --in-bd: transparent; --r-card: 22px; --r-in: 14px; --r-btn: 12px; --r-pri: 25px;
+  --clip-mix: 26%; --clip-ink: #111114; --clip-shadow: 0 0 3px #ffffff; --wave: #111114; --time: #111114;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
   --hdrw: 104px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111114; --panel: #1b1b20; --panel2: #222228; --ink: #f1f1f3; --muted: #9c9ca6; --line: #2f2f37;
-    --accent: #7f9bff; --accent-ink: #0d1020; --gold: #d8ae52; --danger: #ff6b5b; --ok: #5ccf8a;
-    --lane: #18181d; --lane2: #1d1d23; --hdr: #1f1f25; --ph: #ff5a4e;
+    --bg: #0f1115; --panel: #171a21; --panel2: #0f1115; --ink: #eef0f4; --muted: #9aa1ad; --line: #262a33;
+    --accent: #2dd4bf; --accent-ink: #062a26; --acc-soft: #12302c; --gold: #f5b14c; --danger: #ff6b5b; --ok: #4ade80;
+    --lane: #0b0c10; --lane2: #0e1014; --hdr: #12141a; --ph: #2dd4bf; --tabs: #12141a; --top: #0f1115;
+    --card-bd: #262a33; --in-bd: #262a33; --r-card: 16px; --r-in: 12px; --r-btn: 12px; --r-pri: 12px;
+    --clip-mix: 88%; --clip-ink: #0b0c10; --clip-shadow: none; --wave: #0b0c10; --time: #2dd4bf;
     color-scheme: dark;
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
-body { font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+body { font: 15px/1.4 -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 #app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
-.top { display: flex; align-items: center; gap: 8px; padding: calc(8px + var(--safe-t)) 12px 8px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.top { display: flex; align-items: center; gap: 8px; padding: calc(8px + var(--safe-t)) 12px 8px; background: var(--top); border-bottom: 1px solid var(--line); }
+.top.home { border-bottom: 0; padding: calc(14px + var(--safe-t)) 18px 4px; }
+.top.home h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+.top .acc { color: var(--time); }
 .top h1 { font-size: 17px; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top .eng { font-size: 11px; color: var(--muted); white-space: nowrap; }
 main { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
 main.studio { overflow: hidden; display: flex; flex-direction: column; }
-.tabs { display: flex; background: var(--panel); border-top: 1px solid var(--line); padding-bottom: var(--safe-b); }
+.tabs { display: flex; background: var(--tabs); border-top: 1px solid var(--line); padding-bottom: var(--safe-b); }
 .tabs button { flex: 1; border: 0; background: none; padding: 10px 2px 9px; font-size: 12px; font-weight: 600; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .tabs button svg { width: 22px; height: 22px; }
 .tabs button.on { color: var(--accent); }
 .wrap { max-width: 760px; margin: 0 auto; padding: 14px 14px 28px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
-.card h2 { font-size: 15px; margin: 0 0 10px; }
+.card { background: var(--panel); border: 1px solid var(--card-bd); border-radius: var(--r-card); padding: 16px; margin-bottom: 14px; }
+.card h2 { font-size: 17px; margin: 0 0 10px; }
 .muted { color: var(--muted); }
 .small { font-size: 12.5px; }
 label.f { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 10px 0 4px; }
-input[type=text], input[type=number], select, textarea { width: 100%; font-size: 16px; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+input[type=text], input[type=number], select, textarea { width: 100%; font-size: 16px; background: var(--panel2); border: 1px solid var(--in-bd); border-radius: var(--r-in); padding: 10px 12px; }
 textarea { resize: vertical; min-height: 120px; line-height: 1.45; }
 textarea.script { min-height: 46vh; font-size: 15px; }
 input[type=range] { width: 100%; accent-color: var(--accent); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 600; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; white-space: nowrap; }
-.btn.p { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn { border-radius: var(--r-btn); padding: 11px 14px; font-weight: 600; background: var(--panel2); border: 1px solid var(--in-bd); cursor: pointer; white-space: nowrap; min-height: 44px; }
+.btn.p { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); border-radius: var(--r-pri); font-weight: 700; }
 .btn.d { color: var(--danger); }
-.btn.sm { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+.btn.sm { padding: 6px 12px; font-size: 13px; border-radius: 10px; min-height: 36px; }
 .btn:disabled { opacity: .45; }
 .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .btns.full .btn { flex: 1; }
-.list .item { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; margin-bottom: 8px; }
+.list .item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--card-bd); background: var(--panel); border-radius: 16px; margin-bottom: 8px; }
 .list .item .grow { flex: 1; min-width: 0; }
 .list .item b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cover-sm { width: 46px; height: 46px; border-radius: 8px; background: var(--lane2) center/cover; flex: none; display: grid; place-items: center; color: var(--muted); font-weight: 700; }
+.cover-sm { width: 46px; height: 46px; border-radius: 12px; background: var(--acc-soft) center/cover; flex: none; display: grid; place-items: center; color: var(--accent); font-weight: 800; }
 .chbar { display: flex; gap: 6px; align-items: center; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
 .chbar select { flex: 1; min-width: 0; padding: 7px 8px; }
 .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
@@ -65,17 +77,20 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .pill.ok { color: var(--ok); } .pill.warn { color: var(--gold); }
 
 /* Studio */
-.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
-.transport .brk { flex-basis: 100%; height: 0; }
-.transport .btn.sm { flex: 1; }
-.transport label.btn.sm { text-align: center; }
+.transport { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.t-row { display: flex; align-items: center; gap: 6px; }
+.t-acts .btn.sm { flex: 1; padding-left: 6px; padding-right: 6px; }
+.t-acts label.btn.sm { text-align: center; }
+#busy:empty { display: none; }
+.dock { display: none; }
 .transport::-webkit-scrollbar { display: none; }
-.transport .time { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 74px; text-align: center; font-size: 14px; }
-.ib { width: 38px; height: 38px; flex: none; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); display: grid; place-items: center; padding: 0; }
+.time { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 700; min-width: 74px; text-align: center; font-size: 15px; color: var(--time); }
+.ib { width: 40px; height: 40px; flex: none; border-radius: 12px; border: 1px solid var(--in-bd); background: var(--panel2); display: grid; place-items: center; padding: 0; }
 .ib svg { width: 20px; height: 20px; }
-.ib.p { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.ib.p { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); border-radius: 20px; }
 .ib:disabled { opacity: .4; }
 .sep { width: 1px; height: 26px; background: var(--line); flex: none; margin: 0 2px; }
+@media (max-width: 430px) { .transport .sep { display: none; } .transport .time { min-width: 66px; } }
 .tl { flex: 1; min-height: 120px; overflow: auto; position: relative; background: var(--lane); -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
 .tl-inner { position: relative; min-width: 100%; }
 .trow { display: flex; height: 64px; border-bottom: 1px solid var(--line); }
@@ -90,14 +105,14 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .lane { position: relative; flex: 1; background: var(--lane); }
 .trow:nth-child(odd) .lane { background: var(--lane2); }
 .ruler { position: relative; flex: 1; cursor: pointer; }
-.tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); font-size: 10px; color: var(--muted); padding-left: 3px; padding-top: 6px; pointer-events: none; }
-.clip { position: absolute; top: 5px; bottom: 5px; border-radius: 7px; background: color-mix(in srgb, var(--c) 30%, var(--panel)); border: 1.5px solid var(--c); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+.tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); font-family: var(--mono); font-size: 10px; color: var(--muted); padding-left: 3px; padding-top: 6px; pointer-events: none; }
+.clip { position: absolute; top: 5px; bottom: 5px; border-radius: 7px; background: color-mix(in srgb, var(--c) var(--clip-mix), var(--panel)); border: 1.5px solid var(--c); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
 .clip.sel { box-shadow: 0 0 0 2px var(--ink); z-index: 2; }
 .clip.pending { border-style: dashed; background: repeating-linear-gradient(45deg, transparent 0 6px, color-mix(in srgb, var(--c) 18%, transparent) 6px 12px); }
 .clip.stale { opacity: .6; }
 .clip.err { border-color: var(--danger); }
 .clip canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.clip .lbl { position: absolute; left: 6px; right: 6px; top: 3px; font-size: 10.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; text-shadow: 0 0 3px var(--panel); }
+.clip .lbl { position: absolute; left: 6px; right: 6px; top: 3px; font-size: 10.5px; font-weight: 700; color: var(--clip-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; text-shadow: var(--clip-shadow); }
 .clip .h { position: absolute; top: 0; bottom: 0; width: 14px; touch-action: none; }
 .clip .h-l { left: 0; } .clip .h-r { right: 0; }
 .clip.sel .h { background: color-mix(in srgb, var(--ink) 22%, transparent); }
@@ -112,17 +127,57 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 /* Modal & toast */
 #modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: flex-end; justify-content: center; z-index: 50; }
 #modal.on { display: flex; }
-#modal .sheet { background: var(--panel); width: 100%; max-width: 560px; max-height: 88vh; overflow: auto; border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + var(--safe-b)); }
+#modal .sheet { background: var(--panel); width: 100%; max-width: 560px; max-height: 88vh; overflow: auto; border-radius: 22px 22px 0 0; padding: 18px 16px calc(18px + var(--safe-b)); }
 @media (min-width: 700px) { #modal { align-items: center; } #modal .sheet { border-radius: 18px; } }
 #modal h2 { margin: 0 0 8px; font-size: 18px; }
 .bar { height: 8px; background: var(--lane2); border-radius: 99px; overflow: hidden; margin: 12px 0 6px; }
-.bar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .15s; }
-#toast { position: fixed; left: 50%; bottom: calc(80px + var(--safe-b)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 10px; font-size: 13.5px; font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 60; max-width: 90vw; text-align: center; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+#toast { position: fixed; left: 50%; top: calc(64px + var(--safe-t)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 10px; font-size: 13.5px; font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 60; max-width: 90vw; text-align: center; }
 #toast.on { opacity: 1; }
-.cast-item { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 10px; border-left: 5px solid var(--c); }
+.cast-item { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; border: 1px solid var(--line); border-radius: 16px; padding: 10px; margin-bottom: 10px; border-left: 5px solid var(--c); }
 .cast-item .full { grid-column: 1 / -1; }
 .hidden { display: none !important; }
 a { color: var(--accent); }
+
+/* Quick speech: grouped rows + segmented format picker */
+.group { background: var(--panel2); border: 1px solid var(--in-bd); border-radius: var(--r-in); overflow: hidden; margin-top: 10px; }
+.qrow { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-bottom: 1px solid var(--line); font-size: 15px; }
+.qrow:last-child { border-bottom: 0; }
+.qrow > span:first-child { flex: none; }
+.qrow .gsel, .qrow .gin { flex: 1; width: auto; min-width: 0; border: 0; background: transparent; text-align: right; text-align-last: right; color: var(--muted); padding: 10px 0; border-radius: 0; }
+.qrow .gsel:disabled { opacity: .5; }
+.qrow input[type=range] { flex: 1; width: auto; min-width: 0; }
+.gval { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 46px; text-align: right; }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--in-bd); margin-top: 10px; }
+.seg button { border: 0; background: transparent; min-height: 38px; border-radius: 9px; font-weight: 600; color: var(--muted); font-size: 14px; cursor: pointer; }
+.seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+
+/* Studio Dark: big play dock at the bottom of the studio */
+@media (prefers-color-scheme: dark) {
+  .transport .t-main { display: none; }
+  .t-acts .btn.sm { border-radius: 18px; }
+  .dock { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 12px 10px; background: var(--bg); border-top: 1px solid var(--line); }
+  .dock .time { font-size: 20px; min-width: 0; }
+  .dock .dbtns { display: flex; align-items: center; gap: 12px; }
+  .dock .ib { width: 44px; height: 44px; border-radius: 22px; }
+  .dock .ib.big { width: 64px; height: 64px; border-radius: 32px; }
+  .dock .ib.big svg { width: 28px; height: 28px; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+}
+
+/* Follow-along captions */
+.captions { max-height: 210px; overflow: auto; margin-top: 10px; padding: 10px 12px; border-radius: var(--r-in); background: var(--panel2); border: 1px solid var(--in-bd); font-size: 17px; line-height: 1.6; }
+.cseg { margin: 0 0 8px; color: var(--muted); transition: color .15s; }
+.cseg:last-child { margin-bottom: 0; }
+.cseg.cur { color: var(--ink); }
+.cw { border-radius: 5px; padding: 1px 2px; margin: 0 -2px; cursor: pointer; }
+.cw.now { background: var(--accent); color: var(--accent-ink); }
+.cwho { font-size: 13px; letter-spacing: .02em; }
+.ccbar { max-height: 92px; overflow: auto; padding: 8px 12px; background: var(--panel); border-top: 1px solid var(--line); font-size: 17px; line-height: 1.5; }
+.ccbar.dim .cseg { opacity: .55; }
+.ccbar .cseg { margin-bottom: 4px; }
+.t-acts .cc-btn { flex: none; font-weight: 800; letter-spacing: .04em; }
+.t-acts .cc-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
 </style>
 </head>
@@ -1027,6 +1082,55 @@ const Engine = (() => {
   };
 })();
 
+/* ===== Follow-along captions: words highlighted while audio plays =====
+ * Timing: each spoken piece's start/end is exact (we made the audio); words inside a piece
+ * are spread by length, with extra weight for punctuation pauses. */
+const Captions = (() => {
+  // Where speech actually starts/ends inside a generated buffer (trims Kokoro's silence)
+  function speechBounds(data, sr) {
+    const th = 0.015; let a = 0, b = data.length - 1;
+    while (a < data.length && Math.abs(data[a]) < th) a++;
+    while (b > a && Math.abs(data[b]) < th) b--;
+    if (a >= b) return [0, data.length / sr];
+    return [Math.max(0, a / sr - 0.03), Math.min(data.length / sr, (b + 1) / sr + 0.03)];
+  }
+  function words(text, s, e) {
+    const ws = String(text).split(/\s+/).filter(Boolean);
+    const wt = ws.map(w => w.replace(/[^\p{L}\p{N}]/gu, '').length + 2 + (/[.!?]["'’”)]*$/.test(w) ? 6 : /[,;:—-]["'’”)]*$/.test(w) ? 3 : 0));
+    const tot = wt.reduce((a, b) => a + b, 0) || 1;
+    let t = s; const span = Math.max(0.01, e - s);
+    return ws.map((w, i) => { const d = span * wt[i] / tot; const o = { w, s: t, e: t + d }; t += d; return o; });
+  }
+  // Build markup for a list of segments [{text, s, e, who?, color?}]
+  function html(segs) {
+    return segs.map((g, i) => `<p class="cseg" data-g="${i}">${g.who ? `<b class="cwho" style="color:${g.color || 'var(--accent)'}">${esc(g.who)}</b> ` : ''}${words(g.text, g.s, g.e).map(x => `<span class="cw" data-s="${x.s.toFixed(3)}" data-e="${x.e.toFixed(3)}">${esc(x.w)}</span>`).join(' ')}</p>`).join('');
+  }
+  // Highlight the word at time t inside box; keep it in view
+  function highlight(box, t) {
+    if (!box) return;
+    let cur = box.querySelector('.cw.now');
+    if (cur && t >= +cur.dataset.s && t < +cur.dataset.e) return;
+    if (cur) cur.classList.remove('now');
+    box.querySelectorAll('.cseg.cur').forEach(x => x.classList.remove('cur'));
+    const all = box.querySelectorAll('.cw');
+    let found = null;
+    for (const w of all) { if (t >= +w.dataset.s && t < +w.dataset.e) { found = w; break; } if (+w.dataset.s > t) break; }
+    // between pieces: keep the last spoken word lit
+    if (!found) { for (const w of all) { if (+w.dataset.e <= t) found = w; else break; } if (found && t - +found.dataset.e > 1.2) found = null; }
+    if (!found) return;
+    found.classList.add('now');
+    found.parentElement.classList.add('cur');
+    const bt = box.getBoundingClientRect(), r = found.getBoundingClientRect();
+    if (r.top < bt.top + 8 || r.bottom > bt.bottom - 8) box.scrollTop += r.top - bt.top - box.clientHeight / 3;
+  }
+  // SubRip subtitles from segments
+  function srt(segs) {
+    const ts = t => { const ms = Math.round(t * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, s = Math.floor(ms / 1000) % 60; return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms % 1000).padStart(3, '0')}`; };
+    return segs.map((g, i) => `${i + 1}\n${ts(g.s)} --> ${ts(g.e)}\n${g.who ? g.who + ': ' : ''}${g.text}\n`).join('\n');
+  }
+  return { speechBounds, words, html, highlight, srt };
+})();
+
 /* ===== App state & utilities ===== */
 const COLORS = ['#5b7cfa', '#d9962b', '#3fa877', '#d0628a', '#9372d6', '#3ea2c4', '#c56f35', '#86a332'];
 const $ = (s, r = document) => r.querySelector(s);
@@ -1057,6 +1161,7 @@ const ICON = {
 const S = {
   view: 'home', tab: 'script', project: null, chapterId: null,
   sel: null, selTrack: null, pps: 30, playhead: 0, undo: [], redo: [],
+  cc: (() => { try { return localStorage.getItem('abs_cc') !== '0'; } catch { return true; } })(),
 };
 const chapter = () => S.project && (S.project.chapters.find(c => c.id === S.chapterId) || S.project.chapters[0]);
 const castById = id => S.project.cast.find(c => c.id === id) || S.project.cast[0];
@@ -1226,7 +1331,8 @@ async function generate(clips, title) {
         const r = await Engine.synth(p.engine, c.text, cast.voice, cast.speed);
         const ch = await resampleChannels([r.data], r.sr, p.sampleRate, 1);
         const id = await AudioLib.save(ch, p.sampleRate);
-        Object.assign(c, { audioId: id, dur: ch[0].length / p.sampleRate, offset: 0, status: 'ready', genKey: genKey(cast), error: null });
+        const [vs, ve] = Captions.speechBounds(ch[0], p.sampleRate);
+        Object.assign(c, { audioId: id, dur: ch[0].length / p.sampleRate, genDur: ch[0].length / p.sampleRate, vs, ve, offset: 0, status: 'ready', genKey: genKey(cast), error: null });
       } catch (e) {
         if (Progress.cancelled) throw e;
         c.status = 'error'; c.error = e.message || String(e);
@@ -1273,10 +1379,9 @@ async function renderHome(app) {
   Player.stop();
   const projects = (await DB.all('projects')).sort((a, b) => b.updated - a.updated);
   app.innerHTML = `
-    <header class="top"><h1>Audiobook Studio</h1><span class="eng">${esc(Engine.label(Engine.available().native ? 'native' : 'web'))}</span></header>
+    <header class="top home"><h1>Audiobook <span class="acc">Studio</span></h1><span class="eng">${esc(Engine.label(Engine.available().native ? 'native' : 'web'))}</span></header>
     <main><div class="wrap">
-      ${Quick.html()}
-      <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 2px 10px"><b style="font-size:16px">Projects</b><button class="btn p sm" data-a="new">+ New project</button></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px"><b style="font-size:20px;font-weight:800">Projects</b><button class="btn p sm" data-a="new">+ New project</button></div>
       ${projects.length ? `<div class="list">${projects.map(p => {
         const n = p.chapters.reduce((a, c) => a + c.clips.length, 0);
         return `<div class="item" data-open="${p.id}">
@@ -1284,6 +1389,8 @@ async function renderHome(app) {
           <div class="grow"><b>${esc(p.title)}</b><span class="small muted">${p.chapters.length} chapter${p.chapters.length === 1 ? '' : 's'} · ${n} clips · ${p.cast.length} voice${p.cast.length === 1 ? '' : 's'}</span></div>
           <button class="btn sm" data-more="${p.id}">•••</button></div>`;
       }).join('')}</div>` : `<div class="empty" style="padding:20px"><p class="small">No projects yet. A project holds a whole book: chapters, a voice for each character, a multi-track timeline for music and effects, and audiobook export (M4B, MP3, M4A, WAV).</p></div>`}
+      <div style="height:8px"></div>
+      ${Quick.html()}
     </div></main>`;
   Quick.bind(app);
   app.onclick = async e => {
@@ -1520,10 +1627,10 @@ const Quick = (() => {
     get() { try { return JSON.parse(localStorage.getItem('abs_quick') || '{}'); } catch { return {}; } },
     set(v) { try { localStorage.setItem('abs_quick', JSON.stringify(v)); } catch {} }
   };
-  const st = Object.assign({ text: '', voice: 'bm_george', speed: 1, fmt: 'mp3', bitrate: 96, name: '', engine: 'auto', open: true }, store.get());
+  const st = Object.assign({ text: '', voice: 'bm_george', speed: 1, fmt: 'mp3', bitrate: 96, name: '', engine: 'auto', open: true, follow: true }, store.get());
   let result = null; // { blob, url, name, secs }
-  const persist = () => store.set({ text: st.text, voice: st.voice, speed: st.speed, fmt: st.fmt, bitrate: st.bitrate, name: st.name, engine: st.engine, open: st.open });
-  const QFMT = { mp3: 'MP3', m4a: 'M4A (AAC)', wav: 'WAV' };
+  const persist = () => store.set({ text: st.text, voice: st.voice, speed: st.speed, fmt: st.fmt, bitrate: st.bitrate, name: st.name, engine: st.engine, open: st.open, follow: st.follow });
+  const QFMT = { mp3: 'MP3', m4a: 'M4A', wav: 'WAV' };
 
   function html() {
     return `<div class="card" id="quick">
@@ -1533,16 +1640,13 @@ const Quick = (() => {
         <p class="small muted" style="margin:6px 0 0">Type or paste text and turn it into one audio file. For books with chapters and several voices, use a project below.</p>
         <textarea id="q-text" style="margin-top:10px;min-height:150px" placeholder="Type or paste text…">${esc(st.text)}</textarea>
         <div class="small muted" id="q-count" style="text-align:right">${st.text.length.toLocaleString()} characters</div>
-        <div class="row2">
-          <div><label class="f">Voice</label><select id="q-voice">${voiceOptions(st.voice)}</select></div>
-          <div><label class="f">Format</label><select id="q-fmt">${Object.entries(QFMT).map(([k, l]) => `<option value="${k}" ${st.fmt === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="group">
+          <label class="qrow"><span>Voice</span><select id="q-voice" class="gsel">${voiceOptions(st.voice)}</select></label>
+          <label class="qrow"><span>Speed</span><input type="range" id="q-speed" min="0.6" max="1.5" step="0.05" value="${st.speed}"><span class="gval" id="q-sv">${Number(st.speed).toFixed(2)}×</span></label>
+          <label class="qrow"><span>File name</span><input type="text" id="q-name" class="gin" value="${esc(st.name)}" placeholder="speech"></label>
+          <label class="qrow"><span>Quality</span><select id="q-br" class="gsel" ${st.fmt === 'wav' ? 'disabled' : ''}>${[64, 96, 128].map(b => `<option value="${b}" ${st.bitrate === b ? 'selected' : ''}>${b} kbps</option>`).join('')}</select></label>
         </div>
-        <label class="f">Speed <span class="rangev" id="q-sv">${Number(st.speed).toFixed(2)}×</span></label>
-        <input type="range" id="q-speed" min="0.6" max="1.5" step="0.05" value="${st.speed}">
-        <div class="row2">
-          <div><label class="f">File name</label><input type="text" id="q-name" value="${esc(st.name)}" placeholder="speech"></div>
-          <div><label class="f">Quality</label><select id="q-br" ${st.fmt === 'wav' ? 'disabled' : ''}>${[64, 96, 128].map(b => `<option value="${b}" ${st.bitrate === b ? 'selected' : ''}>${b} kbps</option>`).join('')}</select></div>
-        </div>
+        <div class="seg" role="radiogroup" aria-label="Format">${Object.entries(QFMT).map(([k, l]) => `<button type="button" role="radio" aria-checked="${st.fmt === k}" class="${st.fmt === k ? 'on' : ''}" data-qf="${k}">${l}</button>`).join('')}</div>
         <div class="btns full"><button class="btn sm" data-q="hear">Hear voice</button><button class="btn p" data-q="make" style="flex:2">Create audio</button></div>
         <div id="q-result">${resultHtml()}</div>
       </div>
@@ -1552,8 +1656,10 @@ const Quick = (() => {
     if (!result) return '';
     return `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
       <div class="small muted"><b style="color:var(--ink)">${esc(result.name)}</b> · ${fmtLong(result.secs)} · ${(result.blob.size / 1024 / 1024).toFixed(2)} MB</div>
-      <audio controls playsinline src="${result.url}" style="width:100%;margin-top:8px"></audio>
+      <audio controls playsinline src="${result.url}" id="q-audio" style="width:100%;margin-top:8px"></audio>
+      <div class="captions ${st.follow ? '' : 'hidden'}" id="q-cap" aria-live="off">${Captions.html(result.segs)}</div>
       <div class="btns full"><button class="btn p" data-q="save">Save / Share</button><button class="btn" data-q="toproject">Make into project</button></div>
+      <div class="btns full"><button class="btn sm" data-q="follow" aria-pressed="${st.follow}">${st.follow ? 'Hide words' : 'Show words while playing'}</button><button class="btn sm" data-q="srt">Save words (.srt)</button></div>
     </div>`;
   }
 
@@ -1565,10 +1671,26 @@ const Quick = (() => {
     q('q-speed').oninput = e => { st.speed = Number(e.target.value); q('q-sv').textContent = st.speed.toFixed(2) + '×'; persist(); };
     q('q-name').oninput = e => { st.name = e.target.value; persist(); };
     q('q-br').onchange = e => { st.bitrate = Number(e.target.value); persist(); };
-    q('q-fmt').onchange = e => { st.fmt = e.target.value; q('q-br').disabled = st.fmt === 'wav'; persist(); };
+    attachCaptions(root);
+  }
+  function attachCaptions(root) {
+    const a = $('#q-audio', root), box = $('#q-cap', root);
+    if (!a || !box) return;
+    let raf = 0;
+    const loop = () => { Captions.highlight(box, a.currentTime); if (!a.paused) raf = requestAnimationFrame(loop); };
+    a.onplay = () => { cancelAnimationFrame(raf); loop(); };
+    a.onseeked = a.ontimeupdate = () => Captions.highlight(box, a.currentTime);
+    box.onclick = e => { const w = e.target.closest('.cw'); if (w) { a.currentTime = +w.dataset.s + 0.001; Captions.highlight(box, a.currentTime); } };
   }
 
   async function onClick(e, root) {
+    const f = e.target.closest('[data-qf]');
+    if (f) {
+      st.fmt = f.dataset.qf; persist();
+      root.querySelectorAll('[data-qf]').forEach(x => { const on = x.dataset.qf === st.fmt; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+      const br = $('#q-br', root); if (br) br.disabled = st.fmt === 'wav';
+      return true;
+    }
     const b = e.target.closest('[data-q]'); if (!b) return false;
     switch (b.dataset.q) {
       case 'toggle': st.open = !st.open; persist(); render(); break;
@@ -1583,6 +1705,13 @@ const Quick = (() => {
         b.disabled = false; b.textContent = old; break;
       }
       case 'make': await make(root); break;
+      case 'follow': {
+        st.follow = !st.follow; persist();
+        $('#q-cap', root).classList.toggle('hidden', !st.follow);
+        b.textContent = st.follow ? 'Hide words' : 'Show words while playing'; b.setAttribute('aria-pressed', st.follow);
+        break;
+      }
+      case 'srt': if (result) await deliver([{ blob: new Blob([Captions.srt(result.segs)], { type: 'text/plain' }), name: result.name.replace(/\.[^.]+$/, '.srt') }], 'text/plain'); break;
       case 'save': if (result) await deliver([{ blob: result.blob, name: result.name }], result.blob.type); break;
       case 'toproject': {
         const p = newProject(st.name.trim() || 'Quick speech');
@@ -1608,7 +1737,7 @@ const Quick = (() => {
       if (st.fmt === 'm4a' && !(await Encoders.aacSupported(sr, 1, st.bitrate * 1000))) throw new Error('This iPhone can’t make M4A files (needs iOS 26 or later). Choose MP3 instead.');
       await Engine.ensure(st.engine, (f, m) => Progress.set(f, m));
       const enc = st.fmt === 'wav' ? Encoders.wav(sr, 1) : st.fmt === 'mp3' ? Encoders.mp3(sr, 1, st.bitrate) : Encoders.aac(sr, 1, st.bitrate, 'M4A ');
-      const t0 = performance.now(); let done = 0, frames = 0;
+      const t0 = performance.now(); let done = 0, frames = 0; const segs = [];
       const total = pieces.reduce((a, p) => a + p.text.length, 0);
       for (let i = 0; i < pieces.length; i++) {
         if (Progress.cancelled) throw new Error('Cancelled');
@@ -1617,6 +1746,8 @@ const Quick = (() => {
         const r = await Engine.synth(st.engine, pieces[i].text, st.voice, st.speed);
         const [data] = await resampleChannels([r.data], r.sr, sr, 1);
         const gap = new Float32Array(Math.round(pieces[i].gap * sr));
+        const [vs, ve] = Captions.speechBounds(data, sr);
+        segs.push({ text: pieces[i].text, s: frames / sr + vs, e: frames / sr + ve });
         await enc.write([data]); await enc.write([gap]);
         frames += data.length + gap.length; done += pieces[i].text.length;
       }
@@ -1624,10 +1755,10 @@ const Quick = (() => {
       const name = safeName(st.name.trim() || text.slice(0, 40)) + '.' + st.fmt;
       const blob = await enc.finish({ title: st.name.trim() || text.slice(0, 60), artist: voiceName(st.voice), genre: 'Speech' }, null);
       if (result) URL.revokeObjectURL(result.url);
-      result = { blob, url: URL.createObjectURL(blob), name, secs: frames / sr };
+      result = { blob, url: URL.createObjectURL(blob), name, secs: frames / sr, segs };
       window.__lastQuick = result;
       Progress.close();
-      const r = $('#q-result', root); if (r) r.innerHTML = resultHtml();
+      const r = $('#q-result', root); if (r) { r.innerHTML = resultHtml(); attachCaptions(root); }
       toast(`Created ${fmtLong(result.secs)} of audio.`);
     } catch (e) {
       Progress.close();
@@ -1724,29 +1855,48 @@ const Studio = (() => {
     const need = tts.filter(c => c.status !== 'ready' && !c.cut).length;
     main.innerHTML = `
       <div class="transport">
-        <button class="ib" data-t="start" aria-label="To start">${ICON.start}</button>
-        <button class="ib p" data-t="play" id="playbtn" aria-label="Play">${Player.playing ? ICON.pause : ICON.play}</button>
-        <span class="time" id="ptime">${fmtT(S.playhead)}</span>
-        <span class="sep"></span>
-        <button class="ib" data-t="zout" aria-label="Zoom out">${ICON.zout}</button>
-        <button class="ib" data-t="zin" aria-label="Zoom in">${ICON.zin}</button>
-        <span class="sep"></span>
-        <button class="ib" data-t="undo" ${S.undo.length ? '' : 'disabled'} aria-label="Undo">${ICON.undo}</button>
-        <button class="ib" data-t="redo" ${S.redo.length ? '' : 'disabled'} aria-label="Redo">${ICON.redo}</button>
-        <span class="brk"></span>
-        <button class="btn sm" data-t="gen" ${need ? '' : 'disabled'}>${ICON.wand.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Generate${need ? ` (${need})` : ''}</button>
-        <button class="btn sm" data-t="split">${ICON.cut.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Split</button>
-        <button class="btn sm" data-t="addtrack">+ Track</button>
-        <label class="btn sm">${ICON.music.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Import<input type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" id="impfile" hidden multiple></label>
+        <div class="t-row t-main">
+          <button class="ib" data-t="start" aria-label="To start">${ICON.start}</button>
+          <button class="ib p" data-t="play" aria-label="Play">${Player.playing ? ICON.pause : ICON.play}</button>
+          <span class="time ptime">${fmtT(S.playhead)}</span>
+          <span class="sep"></span>
+          <button class="ib" data-t="zout" aria-label="Zoom out">${ICON.zout}</button>
+          <button class="ib" data-t="zin" aria-label="Zoom in">${ICON.zin}</button>
+          <span class="sep"></span>
+          <button class="ib" data-t="undo" ${S.undo.length ? '' : 'disabled'} aria-label="Undo">${ICON.undo}</button>
+          <button class="ib" data-t="redo" ${S.redo.length ? '' : 'disabled'} aria-label="Redo">${ICON.redo}</button>
+        </div>
+        <div class="t-row t-acts">
+          <button class="btn sm" data-t="gen" ${need ? '' : 'disabled'}>${ICON.wand.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Generate${need ? ` (${need})` : ''}</button>
+          <button class="btn sm" data-t="split">${ICON.cut.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Split</button>
+          <button class="btn sm" data-t="addtrack">+ Track</button>
+          <button class="btn sm cc-btn ${S.cc ? 'on' : ''}" data-t="cc" aria-pressed="${S.cc}" aria-label="Show words while playing">CC</button>
+          <label class="btn sm">${ICON.music.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Import<input type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" id="impfile" hidden multiple></label>
+        </div>
         <span id="busy" class="small muted"></span>
       </div>
       <div class="tl" id="tl"></div>
-      <div class="insp" id="insp"></div>`;
+      <div class="ccbar ${S.cc ? '' : 'hidden'}" id="cc"></div>
+      <div class="insp" id="insp"></div>
+      <div class="dock">
+        <span class="time ptime">${fmtT(S.playhead)}</span>
+        <div class="dbtns">
+          <button class="ib" data-t="start" aria-label="To start">${ICON.start}</button>
+          <button class="ib" data-t="undo" ${S.undo.length ? '' : 'disabled'} aria-label="Undo">${ICON.undo}</button>
+          <button class="ib p big" data-t="play" aria-label="Play">${Player.playing ? ICON.pause : ICON.play}</button>
+          <button class="ib" data-t="redo" ${S.redo.length ? '' : 'disabled'} aria-label="Redo">${ICON.redo}</button>
+          <button class="ib" data-t="zout" aria-label="Zoom out">${ICON.zout}</button>
+          <button class="ib" data-t="zin" aria-label="Zoom in">${ICON.zin}</button>
+        </div>
+      </div>`;
     main.onclick = onTransport;
+    $('#cc').onclick = e => { const w = e.target.closest('.cw'); if (!w) return; e.stopPropagation(); const was = Player.playing; Player.stop(); S.playhead = +w.dataset.s + 0.001; updatePlayhead(true); if (was) Player.play().then(updateTransport); };
+    ccKey = null;
     $('#impfile').onchange = e => importAudio([...e.target.files]);
     renderTimeline();
     renderInspector();
     bindPointer($('#tl'));
+    updateCaptions();
   }
 
   function renderTimeline() {
@@ -1781,7 +1931,7 @@ const Studio = (() => {
 
   function drawWaves(tl) {
     const ch = chapter();
-    const color = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#000';
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--wave').trim() || '#000';
     tl.querySelectorAll('.clip').forEach(async el => {
       const c = ch.clips.find(k => k.id === el.dataset.clip); if (!c || !c.audioId) return;
       let rec = AudioLib.peek(c.audioId);
@@ -1806,17 +1956,38 @@ const Studio = (() => {
     });
   }
 
+  let ccKey = null;
+  function updateCaptions() {
+    const box = $('#cc'); if (!box || !S.cc) return;
+    const ch = chapter(), t = S.playhead, tracks = Mixer.audibleTracks(ch);
+    const tts = ch.clips.filter(c => c.kind === 'tts' && tracks.has(c.trackId) && c.audioId).sort((a, b) => a.start - b.start);
+    let act = tts.filter(c => t >= c.start && t < c.start + c.dur);
+    let upcoming = false;
+    if (!act.length) { const nx = tts.find(c => c.start > t); if (nx) { act = [nx]; upcoming = true; } else { const pv = tts.filter(c => c.start + c.dur <= t).pop(); if (pv) act = [pv]; } }
+    const key = act.map(c => c.id).join() + (upcoming ? '~' : '');
+    if (key !== ccKey) {
+      ccKey = key;
+      box.classList.toggle('dim', upcoming);
+      box.innerHTML = act.length ? Captions.html(act.map(c => {
+        const g = c.genDur || (c.dur + (c.offset || 0)), base = c.start - (c.offset || 0);
+        const tr = trackById(c.trackId), cast = castById(c.castId);
+        return { text: c.text, s: base + (c.vs || 0), e: base + (c.ve || g), who: S.project.cast.length > 1 ? cast.name : '', color: tr && tr.color };
+      })) : '<p class="cseg muted small">Words appear here while the chapter plays.</p>';
+    }
+    Captions.highlight(box, t);
+  }
   function updatePlayhead(follow) {
-    const ph = $('#ph'), tm = $('#ptime');
+    const ph = $('#ph');
     if (ph) ph.style.left = xOf(S.playhead) + 'px';
-    if (tm) tm.textContent = fmtT(S.playhead);
+    document.querySelectorAll('.ptime').forEach(tm => { tm.textContent = fmtT(S.playhead); });
     if (follow) {
       const tl = $('#tl'); if (!tl) return;
       const x = xOf(S.playhead);
       if (x > tl.scrollLeft + tl.clientWidth - 40 || x < tl.scrollLeft + HDRW) tl.scrollLeft = x - HDRW - 20;
     }
+    updateCaptions();
   }
-  function updateTransport() { const b = $('#playbtn'); if (b) b.innerHTML = Player.playing ? ICON.pause : ICON.play; updatePlayhead(); }
+  function updateTransport() { document.querySelectorAll('[data-t=play]').forEach(b => { b.innerHTML = Player.playing ? ICON.pause : ICON.play; b.setAttribute('aria-label', Player.playing ? 'Pause' : 'Play'); }); updatePlayhead(); }
   function setBusy(t) { const b = $('#busy'); if (b) b.textContent = t || ''; }
 
   /* ----- transport actions ----- */
@@ -1844,6 +2015,11 @@ const Studio = (() => {
       case 'undo': Player.stop(); undo(); break;
       case 'redo': Player.stop(); redo(); break;
       case 'split': splitAtPlayhead(); break;
+      case 'cc': {
+        S.cc = !S.cc; try { localStorage.setItem('abs_cc', S.cc ? '1' : '0'); } catch {}
+        b.classList.toggle('on', S.cc); b.setAttribute('aria-pressed', S.cc);
+        $('#cc').classList.toggle('hidden', !S.cc); ccKey = null; updateCaptions(); break;
+      }
       case 'gen': Player.stop(); await generate(ch.clips); break;
       case 'addtrack': {
         const kind = await ask('Add a track', 'Music and sound-effect tracks hold imported audio. Character tracks hold speech.', [{ label: 'Music / effects track', value: 'audio', primary: true }, { label: 'Character track', value: 'voice' }, { label: 'Cancel', value: null }]);

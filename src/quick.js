@@ -4,10 +4,10 @@ const Quick = (() => {
     get() { try { return JSON.parse(localStorage.getItem('abs_quick') || '{}'); } catch { return {}; } },
     set(v) { try { localStorage.setItem('abs_quick', JSON.stringify(v)); } catch {} }
   };
-  const st = Object.assign({ text: '', voice: 'bm_george', speed: 1, fmt: 'mp3', bitrate: 96, name: '', engine: 'auto', open: true }, store.get());
+  const st = Object.assign({ text: '', voice: 'bm_george', speed: 1, fmt: 'mp3', bitrate: 96, name: '', engine: 'auto', open: true, follow: true }, store.get());
   let result = null; // { blob, url, name, secs }
-  const persist = () => store.set({ text: st.text, voice: st.voice, speed: st.speed, fmt: st.fmt, bitrate: st.bitrate, name: st.name, engine: st.engine, open: st.open });
-  const QFMT = { mp3: 'MP3', m4a: 'M4A (AAC)', wav: 'WAV' };
+  const persist = () => store.set({ text: st.text, voice: st.voice, speed: st.speed, fmt: st.fmt, bitrate: st.bitrate, name: st.name, engine: st.engine, open: st.open, follow: st.follow });
+  const QFMT = { mp3: 'MP3', m4a: 'M4A', wav: 'WAV' };
 
   function html() {
     return `<div class="card" id="quick">
@@ -17,16 +17,13 @@ const Quick = (() => {
         <p class="small muted" style="margin:6px 0 0">Type or paste text and turn it into one audio file. For books with chapters and several voices, use a project below.</p>
         <textarea id="q-text" style="margin-top:10px;min-height:150px" placeholder="Type or paste text…">${esc(st.text)}</textarea>
         <div class="small muted" id="q-count" style="text-align:right">${st.text.length.toLocaleString()} characters</div>
-        <div class="row2">
-          <div><label class="f">Voice</label><select id="q-voice">${voiceOptions(st.voice)}</select></div>
-          <div><label class="f">Format</label><select id="q-fmt">${Object.entries(QFMT).map(([k, l]) => `<option value="${k}" ${st.fmt === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="group">
+          <label class="qrow"><span>Voice</span><select id="q-voice" class="gsel">${voiceOptions(st.voice)}</select></label>
+          <label class="qrow"><span>Speed</span><input type="range" id="q-speed" min="0.6" max="1.5" step="0.05" value="${st.speed}"><span class="gval" id="q-sv">${Number(st.speed).toFixed(2)}×</span></label>
+          <label class="qrow"><span>File name</span><input type="text" id="q-name" class="gin" value="${esc(st.name)}" placeholder="speech"></label>
+          <label class="qrow"><span>Quality</span><select id="q-br" class="gsel" ${st.fmt === 'wav' ? 'disabled' : ''}>${[64, 96, 128].map(b => `<option value="${b}" ${st.bitrate === b ? 'selected' : ''}>${b} kbps</option>`).join('')}</select></label>
         </div>
-        <label class="f">Speed <span class="rangev" id="q-sv">${Number(st.speed).toFixed(2)}×</span></label>
-        <input type="range" id="q-speed" min="0.6" max="1.5" step="0.05" value="${st.speed}">
-        <div class="row2">
-          <div><label class="f">File name</label><input type="text" id="q-name" value="${esc(st.name)}" placeholder="speech"></div>
-          <div><label class="f">Quality</label><select id="q-br" ${st.fmt === 'wav' ? 'disabled' : ''}>${[64, 96, 128].map(b => `<option value="${b}" ${st.bitrate === b ? 'selected' : ''}>${b} kbps</option>`).join('')}</select></div>
-        </div>
+        <div class="seg" role="radiogroup" aria-label="Format">${Object.entries(QFMT).map(([k, l]) => `<button type="button" role="radio" aria-checked="${st.fmt === k}" class="${st.fmt === k ? 'on' : ''}" data-qf="${k}">${l}</button>`).join('')}</div>
         <div class="btns full"><button class="btn sm" data-q="hear">Hear voice</button><button class="btn p" data-q="make" style="flex:2">Create audio</button></div>
         <div id="q-result">${resultHtml()}</div>
       </div>
@@ -36,8 +33,10 @@ const Quick = (() => {
     if (!result) return '';
     return `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
       <div class="small muted"><b style="color:var(--ink)">${esc(result.name)}</b> · ${fmtLong(result.secs)} · ${(result.blob.size / 1024 / 1024).toFixed(2)} MB</div>
-      <audio controls playsinline src="${result.url}" style="width:100%;margin-top:8px"></audio>
+      <audio controls playsinline src="${result.url}" id="q-audio" style="width:100%;margin-top:8px"></audio>
+      <div class="captions ${st.follow ? '' : 'hidden'}" id="q-cap" aria-live="off">${Captions.html(result.segs)}</div>
       <div class="btns full"><button class="btn p" data-q="save">Save / Share</button><button class="btn" data-q="toproject">Make into project</button></div>
+      <div class="btns full"><button class="btn sm" data-q="follow" aria-pressed="${st.follow}">${st.follow ? 'Hide words' : 'Show words while playing'}</button><button class="btn sm" data-q="srt">Save words (.srt)</button></div>
     </div>`;
   }
 
@@ -49,10 +48,26 @@ const Quick = (() => {
     q('q-speed').oninput = e => { st.speed = Number(e.target.value); q('q-sv').textContent = st.speed.toFixed(2) + '×'; persist(); };
     q('q-name').oninput = e => { st.name = e.target.value; persist(); };
     q('q-br').onchange = e => { st.bitrate = Number(e.target.value); persist(); };
-    q('q-fmt').onchange = e => { st.fmt = e.target.value; q('q-br').disabled = st.fmt === 'wav'; persist(); };
+    attachCaptions(root);
+  }
+  function attachCaptions(root) {
+    const a = $('#q-audio', root), box = $('#q-cap', root);
+    if (!a || !box) return;
+    let raf = 0;
+    const loop = () => { Captions.highlight(box, a.currentTime); if (!a.paused) raf = requestAnimationFrame(loop); };
+    a.onplay = () => { cancelAnimationFrame(raf); loop(); };
+    a.onseeked = a.ontimeupdate = () => Captions.highlight(box, a.currentTime);
+    box.onclick = e => { const w = e.target.closest('.cw'); if (w) { a.currentTime = +w.dataset.s + 0.001; Captions.highlight(box, a.currentTime); } };
   }
 
   async function onClick(e, root) {
+    const f = e.target.closest('[data-qf]');
+    if (f) {
+      st.fmt = f.dataset.qf; persist();
+      root.querySelectorAll('[data-qf]').forEach(x => { const on = x.dataset.qf === st.fmt; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+      const br = $('#q-br', root); if (br) br.disabled = st.fmt === 'wav';
+      return true;
+    }
     const b = e.target.closest('[data-q]'); if (!b) return false;
     switch (b.dataset.q) {
       case 'toggle': st.open = !st.open; persist(); render(); break;
@@ -67,6 +82,13 @@ const Quick = (() => {
         b.disabled = false; b.textContent = old; break;
       }
       case 'make': await make(root); break;
+      case 'follow': {
+        st.follow = !st.follow; persist();
+        $('#q-cap', root).classList.toggle('hidden', !st.follow);
+        b.textContent = st.follow ? 'Hide words' : 'Show words while playing'; b.setAttribute('aria-pressed', st.follow);
+        break;
+      }
+      case 'srt': if (result) await deliver([{ blob: new Blob([Captions.srt(result.segs)], { type: 'text/plain' }), name: result.name.replace(/\.[^.]+$/, '.srt') }], 'text/plain'); break;
       case 'save': if (result) await deliver([{ blob: result.blob, name: result.name }], result.blob.type); break;
       case 'toproject': {
         const p = newProject(st.name.trim() || 'Quick speech');
@@ -92,7 +114,7 @@ const Quick = (() => {
       if (st.fmt === 'm4a' && !(await Encoders.aacSupported(sr, 1, st.bitrate * 1000))) throw new Error('This iPhone can’t make M4A files (needs iOS 26 or later). Choose MP3 instead.');
       await Engine.ensure(st.engine, (f, m) => Progress.set(f, m));
       const enc = st.fmt === 'wav' ? Encoders.wav(sr, 1) : st.fmt === 'mp3' ? Encoders.mp3(sr, 1, st.bitrate) : Encoders.aac(sr, 1, st.bitrate, 'M4A ');
-      const t0 = performance.now(); let done = 0, frames = 0;
+      const t0 = performance.now(); let done = 0, frames = 0; const segs = [];
       const total = pieces.reduce((a, p) => a + p.text.length, 0);
       for (let i = 0; i < pieces.length; i++) {
         if (Progress.cancelled) throw new Error('Cancelled');
@@ -101,6 +123,8 @@ const Quick = (() => {
         const r = await Engine.synth(st.engine, pieces[i].text, st.voice, st.speed);
         const [data] = await resampleChannels([r.data], r.sr, sr, 1);
         const gap = new Float32Array(Math.round(pieces[i].gap * sr));
+        const [vs, ve] = Captions.speechBounds(data, sr);
+        segs.push({ text: pieces[i].text, s: frames / sr + vs, e: frames / sr + ve });
         await enc.write([data]); await enc.write([gap]);
         frames += data.length + gap.length; done += pieces[i].text.length;
       }
@@ -108,10 +132,10 @@ const Quick = (() => {
       const name = safeName(st.name.trim() || text.slice(0, 40)) + '.' + st.fmt;
       const blob = await enc.finish({ title: st.name.trim() || text.slice(0, 60), artist: voiceName(st.voice), genre: 'Speech' }, null);
       if (result) URL.revokeObjectURL(result.url);
-      result = { blob, url: URL.createObjectURL(blob), name, secs: frames / sr };
+      result = { blob, url: URL.createObjectURL(blob), name, secs: frames / sr, segs };
       window.__lastQuick = result;
       Progress.close();
-      const r = $('#q-result', root); if (r) r.innerHTML = resultHtml();
+      const r = $('#q-result', root); if (r) { r.innerHTML = resultHtml(); attachCaptions(root); }
       toast(`Created ${fmtLong(result.secs)} of audio.`);
     } catch (e) {
       Progress.close();

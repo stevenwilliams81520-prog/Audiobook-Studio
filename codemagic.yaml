@@ -22,6 +22,9 @@ workflows:
           if [ ! -d ios ]; then npx cap add ios; fi
       - name: Copy web app into iOS project
         script: npx cap sync ios
+      - name: Declare no non-exempt encryption (skips the export compliance question)
+        script: |
+          plutil -replace ITSAppUsesNonExemptEncryption -bool NO ios/App/App/Info.plist
       - name: Set up signing
         script: xcode-project use-profiles
       - name: Set build number (one higher than the latest on TestFlight)

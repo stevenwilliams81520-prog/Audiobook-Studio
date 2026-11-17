@@ -28,6 +28,7 @@ const ICON = {
 const S = {
   view: 'home', tab: 'script', project: null, chapterId: null,
   sel: null, selTrack: null, pps: 30, playhead: 0, undo: [], redo: [],
+  cc: (() => { try { return localStorage.getItem('abs_cc') !== '0'; } catch { return true; } })(),
 };
 const chapter = () => S.project && (S.project.chapters.find(c => c.id === S.chapterId) || S.project.chapters[0]);
 const castById = id => S.project.cast.find(c => c.id === id) || S.project.cast[0];
@@ -197,7 +198,8 @@ async function generate(clips, title) {
         const r = await Engine.synth(p.engine, c.text, cast.voice, cast.speed);
         const ch = await resampleChannels([r.data], r.sr, p.sampleRate, 1);
         const id = await AudioLib.save(ch, p.sampleRate);
-        Object.assign(c, { audioId: id, dur: ch[0].length / p.sampleRate, offset: 0, status: 'ready', genKey: genKey(cast), error: null });
+        const [vs, ve] = Captions.speechBounds(ch[0], p.sampleRate);
+        Object.assign(c, { audioId: id, dur: ch[0].length / p.sampleRate, genDur: ch[0].length / p.sampleRate, vs, ve, offset: 0, status: 'ready', genKey: genKey(cast), error: null });
       } catch (e) {
         if (Progress.cancelled) throw e;
         c.status = 'error'; c.error = e.message || String(e);
@@ -244,10 +246,9 @@ async function renderHome(app) {
   Player.stop();
   const projects = (await DB.all('projects')).sort((a, b) => b.updated - a.updated);
   app.innerHTML = `
-    <header class="top"><h1>Audiobook Studio</h1><span class="eng">${esc(Engine.label(Engine.available().native ? 'native' : 'web'))}</span></header>
+    <header class="top home"><h1>Audiobook <span class="acc">Studio</span></h1><span class="eng">${esc(Engine.label(Engine.available().native ? 'native' : 'web'))}</span></header>
     <main><div class="wrap">
-      ${Quick.html()}
-      <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 2px 10px"><b style="font-size:16px">Projects</b><button class="btn p sm" data-a="new">+ New project</button></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px"><b style="font-size:20px;font-weight:800">Projects</b><button class="btn p sm" data-a="new">+ New project</button></div>
       ${projects.length ? `<div class="list">${projects.map(p => {
         const n = p.chapters.reduce((a, c) => a + c.clips.length, 0);
         return `<div class="item" data-open="${p.id}">
@@ -255,6 +256,8 @@ async function renderHome(app) {
           <div class="grow"><b>${esc(p.title)}</b><span class="small muted">${p.chapters.length} chapter${p.chapters.length === 1 ? '' : 's'} · ${n} clips · ${p.cast.length} voice${p.cast.length === 1 ? '' : 's'}</span></div>
           <button class="btn sm" data-more="${p.id}">•••</button></div>`;
       }).join('')}</div>` : `<div class="empty" style="padding:20px"><p class="small">No projects yet. A project holds a whole book: chapters, a voice for each character, a multi-track timeline for music and effects, and audiobook export (M4B, MP3, M4A, WAV).</p></div>`}
+      <div style="height:8px"></div>
+      ${Quick.html()}
     </div></main>`;
   Quick.bind(app);
   app.onclick = async e => {

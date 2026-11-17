@@ -84,29 +84,48 @@ const Studio = (() => {
     const need = tts.filter(c => c.status !== 'ready' && !c.cut).length;
     main.innerHTML = `
       <div class="transport">
-        <button class="ib" data-t="start" aria-label="To start">${ICON.start}</button>
-        <button class="ib p" data-t="play" id="playbtn" aria-label="Play">${Player.playing ? ICON.pause : ICON.play}</button>
-        <span class="time" id="ptime">${fmtT(S.playhead)}</span>
-        <span class="sep"></span>
-        <button class="ib" data-t="zout" aria-label="Zoom out">${ICON.zout}</button>
-        <button class="ib" data-t="zin" aria-label="Zoom in">${ICON.zin}</button>
-        <span class="sep"></span>
-        <button class="ib" data-t="undo" ${S.undo.length ? '' : 'disabled'} aria-label="Undo">${ICON.undo}</button>
-        <button class="ib" data-t="redo" ${S.redo.length ? '' : 'disabled'} aria-label="Redo">${ICON.redo}</button>
-        <span class="brk"></span>
-        <button class="btn sm" data-t="gen" ${need ? '' : 'disabled'}>${ICON.wand.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Generate${need ? ` (${need})` : ''}</button>
-        <button class="btn sm" data-t="split">${ICON.cut.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Split</button>
-        <button class="btn sm" data-t="addtrack">+ Track</button>
-        <label class="btn sm">${ICON.music.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Import<input type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" id="impfile" hidden multiple></label>
+        <div class="t-row t-main">
+          <button class="ib" data-t="start" aria-label="To start">${ICON.start}</button>
+          <button class="ib p" data-t="play" aria-label="Play">${Player.playing ? ICON.pause : ICON.play}</button>
+          <span class="time ptime">${fmtT(S.playhead)}</span>
+          <span class="sep"></span>
+          <button class="ib" data-t="zout" aria-label="Zoom out">${ICON.zout}</button>
+          <button class="ib" data-t="zin" aria-label="Zoom in">${ICON.zin}</button>
+          <span class="sep"></span>
+          <button class="ib" data-t="undo" ${S.undo.length ? '' : 'disabled'} aria-label="Undo">${ICON.undo}</button>
+          <button class="ib" data-t="redo" ${S.redo.length ? '' : 'disabled'} aria-label="Redo">${ICON.redo}</button>
+        </div>
+        <div class="t-row t-acts">
+          <button class="btn sm" data-t="gen" ${need ? '' : 'disabled'}>${ICON.wand.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Generate${need ? ` (${need})` : ''}</button>
+          <button class="btn sm" data-t="split">${ICON.cut.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Split</button>
+          <button class="btn sm" data-t="addtrack">+ Track</button>
+          <button class="btn sm cc-btn ${S.cc ? 'on' : ''}" data-t="cc" aria-pressed="${S.cc}" aria-label="Show words while playing">CC</button>
+          <label class="btn sm">${ICON.music.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Import<input type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" id="impfile" hidden multiple></label>
+        </div>
         <span id="busy" class="small muted"></span>
       </div>
       <div class="tl" id="tl"></div>
-      <div class="insp" id="insp"></div>`;
+      <div class="ccbar ${S.cc ? '' : 'hidden'}" id="cc"></div>
+      <div class="insp" id="insp"></div>
+      <div class="dock">
+        <span class="time ptime">${fmtT(S.playhead)}</span>
+        <div class="dbtns">
+          <button class="ib" data-t="start" aria-label="To start">${ICON.start}</button>
+          <button class="ib" data-t="undo" ${S.undo.length ? '' : 'disabled'} aria-label="Undo">${ICON.undo}</button>
+          <button class="ib p big" data-t="play" aria-label="Play">${Player.playing ? ICON.pause : ICON.play}</button>
+          <button class="ib" data-t="redo" ${S.redo.length ? '' : 'disabled'} aria-label="Redo">${ICON.redo}</button>
+          <button class="ib" data-t="zout" aria-label="Zoom out">${ICON.zout}</button>
+          <button class="ib" data-t="zin" aria-label="Zoom in">${ICON.zin}</button>
+        </div>
+      </div>`;
     main.onclick = onTransport;
+    $('#cc').onclick = e => { const w = e.target.closest('.cw'); if (!w) return; e.stopPropagation(); const was = Player.playing; Player.stop(); S.playhead = +w.dataset.s + 0.001; updatePlayhead(true); if (was) Player.play().then(updateTransport); };
+    ccKey = null;
     $('#impfile').onchange = e => importAudio([...e.target.files]);
     renderTimeline();
     renderInspector();
     bindPointer($('#tl'));
+    updateCaptions();
   }
 
   function renderTimeline() {
@@ -141,7 +160,7 @@ const Studio = (() => {
 
   function drawWaves(tl) {
     const ch = chapter();
-    const color = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#000';
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--wave').trim() || '#000';
     tl.querySelectorAll('.clip').forEach(async el => {
       const c = ch.clips.find(k => k.id === el.dataset.clip); if (!c || !c.audioId) return;
       let rec = AudioLib.peek(c.audioId);
@@ -166,17 +185,38 @@ const Studio = (() => {
     });
   }
 
+  let ccKey = null;
+  function updateCaptions() {
+    const box = $('#cc'); if (!box || !S.cc) return;
+    const ch = chapter(), t = S.playhead, tracks = Mixer.audibleTracks(ch);
+    const tts = ch.clips.filter(c => c.kind === 'tts' && tracks.has(c.trackId) && c.audioId).sort((a, b) => a.start - b.start);
+    let act = tts.filter(c => t >= c.start && t < c.start + c.dur);
+    let upcoming = false;
+    if (!act.length) { const nx = tts.find(c => c.start > t); if (nx) { act = [nx]; upcoming = true; } else { const pv = tts.filter(c => c.start + c.dur <= t).pop(); if (pv) act = [pv]; } }
+    const key = act.map(c => c.id).join() + (upcoming ? '~' : '');
+    if (key !== ccKey) {
+      ccKey = key;
+      box.classList.toggle('dim', upcoming);
+      box.innerHTML = act.length ? Captions.html(act.map(c => {
+        const g = c.genDur || (c.dur + (c.offset || 0)), base = c.start - (c.offset || 0);
+        const tr = trackById(c.trackId), cast = castById(c.castId);
+        return { text: c.text, s: base + (c.vs || 0), e: base + (c.ve || g), who: S.project.cast.length > 1 ? cast.name : '', color: tr && tr.color };
+      })) : '<p class="cseg muted small">Words appear here while the chapter plays.</p>';
+    }
+    Captions.highlight(box, t);
+  }
   function updatePlayhead(follow) {
-    const ph = $('#ph'), tm = $('#ptime');
+    const ph = $('#ph');
     if (ph) ph.style.left = xOf(S.playhead) + 'px';
-    if (tm) tm.textContent = fmtT(S.playhead);
+    document.querySelectorAll('.ptime').forEach(tm => { tm.textContent = fmtT(S.playhead); });
     if (follow) {
       const tl = $('#tl'); if (!tl) return;
       const x = xOf(S.playhead);
       if (x > tl.scrollLeft + tl.clientWidth - 40 || x < tl.scrollLeft + HDRW) tl.scrollLeft = x - HDRW - 20;
     }
+    updateCaptions();
   }
-  function updateTransport() { const b = $('#playbtn'); if (b) b.innerHTML = Player.playing ? ICON.pause : ICON.play; updatePlayhead(); }
+  function updateTransport() { document.querySelectorAll('[data-t=play]').forEach(b => { b.innerHTML = Player.playing ? ICON.pause : ICON.play; b.setAttribute('aria-label', Player.playing ? 'Pause' : 'Play'); }); updatePlayhead(); }
   function setBusy(t) { const b = $('#busy'); if (b) b.textContent = t || ''; }
 
   /* ----- transport actions ----- */
@@ -204,6 +244,11 @@ const Studio = (() => {
       case 'undo': Player.stop(); undo(); break;
       case 'redo': Player.stop(); redo(); break;
       case 'split': splitAtPlayhead(); break;
+      case 'cc': {
+        S.cc = !S.cc; try { localStorage.setItem('abs_cc', S.cc ? '1' : '0'); } catch {}
+        b.classList.toggle('on', S.cc); b.setAttribute('aria-pressed', S.cc);
+        $('#cc').classList.toggle('hidden', !S.cc); ccKey = null; updateCaptions(); break;
+      }
       case 'gen': Player.stop(); await generate(ch.clips); break;
       case 'addtrack': {
         const kind = await ask('Add a track', 'Music and sound-effect tracks hold imported audio. Character tracks hold speech.', [{ label: 'Music / effects track', value: 'audio', primary: true }, { label: 'Character track', value: 'voice' }, { label: 'Cancel', value: null }]);

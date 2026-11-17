@@ -10,7 +10,7 @@ Home page: **Quick speech** (text → one MP3/M4A/WAV) and **Projects** (chapter
 
 ## Building for iPhone (TestFlight)
 1. Put this folder in a new GitHub repo and connect it to Codemagic.
-2. In `codemagic.yaml`, set `YOUR_ASC_KEY_NAME` to your existing App Store Connect integration name.
+2. `codemagic.yaml` uses the "Berfau ASC" integration and App Apple ID 6835655115.
 3. Register the bundle ID `com.stevenwilliams.audiobookstudio` and create the app record in App Store Connect.
 4. Start the "iOS TestFlight" workflow. The first build creates the `ios/` project automatically.
 

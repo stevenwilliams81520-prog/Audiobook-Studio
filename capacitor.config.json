@@ -3,7 +3,6 @@
   "appName": "Audiobook Studio",
   "webDir": "www",
   "ios": {
-    "contentInset": "never",
-    "backgroundColor": "#f4f2ed"
+    "contentInset": "never"
   }
 }

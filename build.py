@@ -4,13 +4,16 @@ import pathlib
 root = pathlib.Path(__file__).parent
 css = (root / 'src/app.css').read_text()
 lame = (root / 'vendor/lame.min.js').read_text()
-js = '\n'.join((root / 'src' / f).read_text() for f in ['mp4.js', 'audio.js', 'engine.js', 'app.js', 'quick.js', 'studio.js'])
+js = '\n'.join((root / 'src' / f).read_text() for f in ['mp4.js', 'audio.js', 'engine.js', 'captions.js', 'app.js', 'quick.js', 'studio.js'])
 html = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
 <title>Audiobook Studio</title>
 <style>
 {css}
