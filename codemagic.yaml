@@ -33,6 +33,10 @@ workflows:
       - name: Declare no non-exempt encryption (skips the export compliance question)
         script: |
           plutil -replace ITSAppUsesNonExemptEncryption -bool NO ios/App/App/Info.plist
+      - name: Camera and photo permission messages (for scanning pages)
+        script: |
+          plutil -replace NSCameraUsageDescription -string "Audiobook Studio uses the camera to scan book pages into text." ios/App/App/Info.plist
+          plutil -replace NSPhotoLibraryUsageDescription -string "Audiobook Studio reads photos of pages you choose to turn them into text." ios/App/App/Info.plist
       - name: Set up signing
         script: xcode-project use-profiles
       - name: Set build number (one higher than the latest on TestFlight)

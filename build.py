@@ -4,7 +4,7 @@ import pathlib
 root = pathlib.Path(__file__).parent
 css = (root / 'src/app.css').read_text()
 lame = (root / 'vendor/lame.min.js').read_text()
-js = '\n'.join((root / 'src' / f).read_text() for f in ['mp4.js', 'audio.js', 'engine.js', 'captions.js', 'app.js', 'quick.js', 'studio.js'])
+js = '\n'.join((root / 'src' / f).read_text() for f in ['mp4.js', 'audio.js', 'engine.js', 'captions.js', 'ocr.js', 'app.js', 'quick.js', 'studio.js'])
 theme_js = """<script>try{var p=localStorage.getItem('abs_theme')||'auto';if(p==='dark'||(p==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');}catch(e){}</script>"""
 html = f'''<!DOCTYPE html>
 <html lang="en">

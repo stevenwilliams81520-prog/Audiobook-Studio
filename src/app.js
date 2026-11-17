@@ -22,6 +22,8 @@ const ICON = {
   wand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 4V2M15 10V8M11 6h2M17 6h2M4 20L14 10"/></svg>',
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>',
+  photo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>',
   cut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg>',
 };
 
@@ -398,6 +400,8 @@ function renderScript(main) {
         <button class="btn" data-s="gen">Generate audio</button>
       </div>
       <div class="btns">
+        <button class="btn sm" data-s="scan-cam">${ICON.camera.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Scan page</button>
+        <button class="btn sm" data-s="scan-lib">${ICON.photo.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Photo</button>
         <button class="btn sm" data-s="speakers">Find characters</button>
         <button class="btn sm" data-s="book">Import whole book…</button>
         <label class="btn sm">Open .txt<input type="file" accept=".txt,text/plain" id="txtfile" hidden></label>
@@ -427,6 +431,13 @@ function renderScript(main) {
     if (k === 'gen') {
       if (!ch.clips.some(c => c.kind === 'tts')) { mutate(() => buildTimeline(ch), { render: false }); }
       await generate(ch.clips);
+    }
+    if (k === 'scan-cam' || k === 'scan-lib') {
+      Scan.start(k === 'scan-cam', text => {
+        mutate(() => { ch.script = [ch.script.trim(), text].filter(Boolean).join('\n\n'); });
+        toast('Scanned text added to the end of this chapter.');
+      });
+      return;
     }
     if (k === 'speakers') {
       const found = detectSpeakers(ch.script, p.cast);

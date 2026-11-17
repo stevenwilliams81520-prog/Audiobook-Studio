@@ -16,6 +16,7 @@ const Quick = (() => {
         <button class="btn sm" data-q="toggle">${st.open ? 'Hide' : 'Show'}</button></h2>
       <div class="${st.open ? '' : 'hidden'}">
         <p class="small muted" style="margin:6px 0 0">Type or paste text and turn it into one audio file. For books with chapters and several voices, use a project below.</p>
+        <div class="btns full" style="margin-top:10px"><button class="btn sm" data-q="scan-cam">${ICON.camera.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Scan page</button><button class="btn sm" data-q="scan-lib">${ICON.photo.replace('<svg', '<svg width="16" height="16" style="vertical-align:-3px"')} Photo</button></div>
         <textarea id="q-text" style="margin-top:10px;min-height:150px" placeholder="Type or paste text…">${esc(st.text)}</textarea>
         <div class="small muted" id="q-count" style="text-align:right">${st.text.length.toLocaleString()} characters</div>
         <div class="group">
@@ -101,6 +102,16 @@ const Quick = (() => {
         b.disabled = false; b.textContent = old; break;
       }
       case 'make': await make(root); break;
+      case 'scan-cam': case 'scan-lib':
+        Scan.start(b.dataset.q === 'scan-cam', async text => {
+          let mode = 'replace';
+          if (st.text.trim()) mode = await ask('Add scanned text', 'There\u2019s already text in Quick speech.', [{ label: 'Add to the end', value: 'add', primary: true }, { label: 'Replace it', value: 'replace' }, { label: 'Cancel', value: null }]);
+          if (!mode) return;
+          st.text = mode === 'add' ? st.text.trim() + '\n\n' + text : text; persist();
+          const ta = $('#q-text', root); if (ta) { ta.value = st.text; $('#q-count', root).textContent = st.text.length.toLocaleString() + ' characters'; ta.scrollIntoView({ block: 'center' }); }
+          toast('Text ready — tap Create audio.');
+        });
+        break;
       case 'srt': if (result) await deliver([{ blob: new Blob([Captions.srt(result.segs)], { type: 'text/plain' }), name: result.name.replace(/\.[^.]+$/, '.srt') }], 'text/plain'); break;
       case 'save': if (result) await deliver([{ blob: result.blob, name: result.name }], result.blob.type); break;
       case 'toproject': {
