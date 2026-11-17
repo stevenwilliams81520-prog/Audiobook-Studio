@@ -35,6 +35,39 @@ const castById = id => S.project.cast.find(c => c.id === id) || S.project.cast[0
 const trackById = id => chapter().tracks.find(t => t.id === id);
 const genKey = cast => `${cast.voice}|${cast.speed}`;
 
+/* ---------- appearance: automatic / light / dark ---------- */
+const Theme = (() => {
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  let pref = 'auto';
+  try { pref = localStorage.getItem('abs_theme') || 'auto'; } catch {}
+  const isDark = () => pref === 'dark' || (pref === 'auto' && !!(mq && mq.matches));
+  function apply() {
+    const dark = isDark(), root = document.documentElement;
+    root.classList.toggle('dark', dark);
+    root.dataset.theme = pref;
+    const m = document.getElementById('theme-color'); if (m) m.content = dark ? '#0f1115' : '#f2f2f7';
+    const sb = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar;
+    if (sb) { try { const r = sb.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); if (r && r.catch) r.catch(() => {}); } catch {} }
+  }
+  function changed() { apply(); if (S.view === 'project' && S.tab === 'studio') Studio.renderTimeline(); }
+  if (mq) { const h = () => { if (pref === 'auto') changed(); }; mq.addEventListener ? mq.addEventListener('change', h) : mq.addListener(h); }
+  function set(p) { pref = p; try { localStorage.setItem('abs_theme', p); } catch {} changed(); }
+  const OPTS = [['auto', 'Automatic'], ['light', 'Light'], ['dark', 'Dark']];
+  function seg() { return `<div class="seg theme-seg" role="radiogroup" aria-label="Appearance">${OPTS.map(([k, l]) => `<button type="button" role="radio" data-th="${k}" aria-checked="${pref === k}" class="${pref === k ? 'on' : ''}">${l}</button>`).join('')}</div>`; }
+  function handle(e, scope) {
+    const b = e.target.closest('[data-th]'); if (!b) return false;
+    set(b.dataset.th);
+    scope.querySelectorAll('[data-th]').forEach(x => { const on = x.dataset.th === pref; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+    return true;
+  }
+  function openSheet() {
+    const el = openModal(`<h2>Appearance</h2>${seg()}<p class="small muted">Automatic follows your iPhone's Light/Dark setting. Light uses the Bright style, Dark uses Studio Dark.</p><div class="btns full"><button class="btn p" data-done="1">Done</button></div>`);
+    el.onclick = e => { if (handle(e, el)) return; if (e.target.closest('[data-done]')) closeModal(); };
+  }
+  apply();
+  return { get pref() { return pref; }, isDark, set, seg, handle, openSheet, apply };
+})();
+
 /* ---------- toast / modal ---------- */
 let toastT;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600); }
@@ -246,7 +279,7 @@ async function renderHome(app) {
   Player.stop();
   const projects = (await DB.all('projects')).sort((a, b) => b.updated - a.updated);
   app.innerHTML = `
-    <header class="top home"><h1>Audiobook <span class="acc">Studio</span></h1><span class="eng">${esc(Engine.label(Engine.available().native ? 'native' : 'web'))}</span></header>
+    <header class="top home"><h1>Audiobook <span class="acc">Studio</span></h1><button class="ib gear" data-a="theme" aria-label="Appearance">${ICON.setup}</button></header>
     <main><div class="wrap">
       <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px"><b style="font-size:20px;font-weight:800">Projects</b><button class="btn p sm" data-a="new">+ New project</button></div>
       ${projects.length ? `<div class="list">${projects.map(p => {
@@ -262,6 +295,7 @@ async function renderHome(app) {
   Quick.bind(app);
   app.onclick = async e => {
     if (await Quick.onClick(e, app)) return;
+    if (e.target.closest('[data-a=theme]')) return Theme.openSheet();
     const more = e.target.closest('[data-more]');
     if (more) {
       e.stopPropagation();
@@ -305,7 +339,7 @@ function renderProject(app) {
   const tabs = [['script', 'Script'], ['studio', 'Studio'], ['cast', 'Voices'], ['export', 'Export'], ['setup', 'Setup']];
   const showCh = ['script', 'studio'].includes(S.tab);
   app.innerHTML = `
-    <header class="top"><button class="ib" data-a="home" aria-label="Projects">${ICON.back}</button><h1>${esc(p.title)}</h1><span class="eng">${esc(Engine.label(Engine.kind || (p.engine === 'auto' ? (Engine.available().native ? 'native' : 'web') : p.engine)))}</span></header>
+    <header class="top"><button class="ib" data-a="home" aria-label="Projects">${ICON.back}</button><h1>${esc(p.title)}</h1></header>
     ${showCh ? `<div class="chbar"><select id="chsel">${p.chapters.map((c, i) => `<option value="${c.id}" ${c.id === ch.id ? 'selected' : ''}>${i + 1}. ${esc(c.title)}</option>`).join('')}</select>
       <button class="btn sm" data-a="ch-add">+ Chapter</button><button class="btn sm" data-a="ch-menu">•••</button></div>` : ''}
     <main id="main" class="${S.tab === 'studio' ? 'studio' : ''}"></main>
@@ -356,7 +390,7 @@ function renderScript(main) {
   main.innerHTML = `<div class="wrap">
     <div class="card">
       <h2>Script — ${esc(ch.title)}</h2>
-      <textarea class="script" id="scr" placeholder="Paste or type this chapter.\n\nPlain paragraphs are read by the Narrator.\n\nStart a line with a character's name and a colon to give it their voice, e.g.\nWorshipful Master: Brethren, assist me to open the Lodge.">${esc(ch.script || '')}</textarea>
+      <textarea class="script" id="scr" placeholder="Paste or type this chapter.\n\nPlain paragraphs are read by the Narrator.\n\nStart a line with a character's name and a colon to give it their voice, e.g.\nCaptain: All hands on deck, the storm is coming!">${esc(ch.script || '')}</textarea>
       <p class="small muted" id="scr-info">${blocks.length} line${blocks.length === 1 ? '' : 's'} · ${tts ? `${ready}/${tts} clips generated` : 'not on the timeline yet'}</p>
       <div class="btns full">
         <button class="btn p" data-s="build">Build timeline</button>

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" id="theme-color" content="#f2f2f7">
+<script>try{var p=localStorage.getItem('abs_theme')||'auto';if(p==='dark'||(p==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');}catch(e){}</script>
 <title>Audiobook Studio</title>
 <style>
 /* Light = "Bright", dark = "Studio Dark" (follows the iPhone's appearance setting) */
@@ -21,15 +21,13 @@
   --hdrw: 104px;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+html.dark {
     --bg: #0f1115; --panel: #171a21; --panel2: #0f1115; --ink: #eef0f4; --muted: #9aa1ad; --line: #262a33;
     --accent: #2dd4bf; --accent-ink: #062a26; --acc-soft: #12302c; --gold: #f5b14c; --danger: #ff6b5b; --ok: #4ade80;
     --lane: #0b0c10; --lane2: #0e1014; --hdr: #12141a; --ph: #2dd4bf; --tabs: #12141a; --top: #0f1115;
     --card-bd: #262a33; --in-bd: #262a33; --r-card: 16px; --r-in: 12px; --r-btn: 12px; --r-pri: 12px;
     --clip-mix: 88%; --clip-ink: #0b0c10; --clip-shadow: none; --wave: #0b0c10; --time: #2dd4bf;
     color-scheme: dark;
-  }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
@@ -153,17 +151,15 @@ a { color: var(--accent); }
 .seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
 
 /* Studio Dark: big play dock at the bottom of the studio */
-@media (prefers-color-scheme: dark) {
-  .transport .t-main { display: none; }
-  .t-acts .btn.sm { border-radius: 18px; }
-  .dock { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 12px 10px; background: var(--bg); border-top: 1px solid var(--line); }
-  .dock .time { font-size: 20px; min-width: 0; }
-  .dock .dbtns { display: flex; align-items: center; gap: 12px; }
-  .dock .ib { width: 44px; height: 44px; border-radius: 22px; }
-  .dock .ib.big { width: 64px; height: 64px; border-radius: 32px; }
-  .dock .ib.big svg { width: 28px; height: 28px; }
-  .seg button.on { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
-}
+html.dark .transport .t-main { display: none; }
+html.dark .t-acts .btn.sm { border-radius: 18px; }
+html.dark .dock { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 12px 10px; background: var(--bg); border-top: 1px solid var(--line); }
+html.dark .dock .time { font-size: 20px; min-width: 0; }
+html.dark .dock .dbtns { display: flex; align-items: center; gap: 12px; }
+html.dark .dock .ib { width: 44px; height: 44px; border-radius: 22px; }
+html.dark .dock .ib.big { width: 64px; height: 64px; border-radius: 32px; }
+html.dark .dock .ib.big svg { width: 28px; height: 28px; }
+html.dark .seg button.on { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
 
 /* Follow-along captions */
 .captions { max-height: 210px; overflow: auto; margin-top: 10px; padding: 10px 12px; border-radius: var(--r-in); background: var(--panel2); border: 1px solid var(--in-bd); font-size: 17px; line-height: 1.6; }
@@ -178,6 +174,10 @@ a { color: var(--accent); }
 .ccbar .cseg { margin-bottom: 4px; }
 .t-acts .cc-btn { flex: none; font-weight: 800; letter-spacing: .04em; }
 .t-acts .cc-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* Appearance picker */
+.theme-seg { margin-top: 4px; }
+.top .ib.gear { margin-left: auto; }
 
 </style>
 </head>
@@ -1168,6 +1168,39 @@ const castById = id => S.project.cast.find(c => c.id === id) || S.project.cast[0
 const trackById = id => chapter().tracks.find(t => t.id === id);
 const genKey = cast => `${cast.voice}|${cast.speed}`;
 
+/* ---------- appearance: automatic / light / dark ---------- */
+const Theme = (() => {
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  let pref = 'auto';
+  try { pref = localStorage.getItem('abs_theme') || 'auto'; } catch {}
+  const isDark = () => pref === 'dark' || (pref === 'auto' && !!(mq && mq.matches));
+  function apply() {
+    const dark = isDark(), root = document.documentElement;
+    root.classList.toggle('dark', dark);
+    root.dataset.theme = pref;
+    const m = document.getElementById('theme-color'); if (m) m.content = dark ? '#0f1115' : '#f2f2f7';
+    const sb = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar;
+    if (sb) { try { const r = sb.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); if (r && r.catch) r.catch(() => {}); } catch {} }
+  }
+  function changed() { apply(); if (S.view === 'project' && S.tab === 'studio') Studio.renderTimeline(); }
+  if (mq) { const h = () => { if (pref === 'auto') changed(); }; mq.addEventListener ? mq.addEventListener('change', h) : mq.addListener(h); }
+  function set(p) { pref = p; try { localStorage.setItem('abs_theme', p); } catch {} changed(); }
+  const OPTS = [['auto', 'Automatic'], ['light', 'Light'], ['dark', 'Dark']];
+  function seg() { return `<div class="seg theme-seg" role="radiogroup" aria-label="Appearance">${OPTS.map(([k, l]) => `<button type="button" role="radio" data-th="${k}" aria-checked="${pref === k}" class="${pref === k ? 'on' : ''}">${l}</button>`).join('')}</div>`; }
+  function handle(e, scope) {
+    const b = e.target.closest('[data-th]'); if (!b) return false;
+    set(b.dataset.th);
+    scope.querySelectorAll('[data-th]').forEach(x => { const on = x.dataset.th === pref; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+    return true;
+  }
+  function openSheet() {
+    const el = openModal(`<h2>Appearance</h2>${seg()}<p class="small muted">Automatic follows your iPhone's Light/Dark setting. Light uses the Bright style, Dark uses Studio Dark.</p><div class="btns full"><button class="btn p" data-done="1">Done</button></div>`);
+    el.onclick = e => { if (handle(e, el)) return; if (e.target.closest('[data-done]')) closeModal(); };
+  }
+  apply();
+  return { get pref() { return pref; }, isDark, set, seg, handle, openSheet, apply };
+})();
+
 /* ---------- toast / modal ---------- */
 let toastT;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600); }
@@ -1379,7 +1412,7 @@ async function renderHome(app) {
   Player.stop();
   const projects = (await DB.all('projects')).sort((a, b) => b.updated - a.updated);
   app.innerHTML = `
-    <header class="top home"><h1>Audiobook <span class="acc">Studio</span></h1><span class="eng">${esc(Engine.label(Engine.available().native ? 'native' : 'web'))}</span></header>
+    <header class="top home"><h1>Audiobook <span class="acc">Studio</span></h1><button class="ib gear" data-a="theme" aria-label="Appearance">${ICON.setup}</button></header>
     <main><div class="wrap">
       <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px"><b style="font-size:20px;font-weight:800">Projects</b><button class="btn p sm" data-a="new">+ New project</button></div>
       ${projects.length ? `<div class="list">${projects.map(p => {
@@ -1395,6 +1428,7 @@ async function renderHome(app) {
   Quick.bind(app);
   app.onclick = async e => {
     if (await Quick.onClick(e, app)) return;
+    if (e.target.closest('[data-a=theme]')) return Theme.openSheet();
     const more = e.target.closest('[data-more]');
     if (more) {
       e.stopPropagation();
@@ -1438,7 +1472,7 @@ function renderProject(app) {
   const tabs = [['script', 'Script'], ['studio', 'Studio'], ['cast', 'Voices'], ['export', 'Export'], ['setup', 'Setup']];
   const showCh = ['script', 'studio'].includes(S.tab);
   app.innerHTML = `
-    <header class="top"><button class="ib" data-a="home" aria-label="Projects">${ICON.back}</button><h1>${esc(p.title)}</h1><span class="eng">${esc(Engine.label(Engine.kind || (p.engine === 'auto' ? (Engine.available().native ? 'native' : 'web') : p.engine)))}</span></header>
+    <header class="top"><button class="ib" data-a="home" aria-label="Projects">${ICON.back}</button><h1>${esc(p.title)}</h1></header>
     ${showCh ? `<div class="chbar"><select id="chsel">${p.chapters.map((c, i) => `<option value="${c.id}" ${c.id === ch.id ? 'selected' : ''}>${i + 1}. ${esc(c.title)}</option>`).join('')}</select>
       <button class="btn sm" data-a="ch-add">+ Chapter</button><button class="btn sm" data-a="ch-menu">•••</button></div>` : ''}
     <main id="main" class="${S.tab === 'studio' ? 'studio' : ''}"></main>
@@ -1489,7 +1523,7 @@ function renderScript(main) {
   main.innerHTML = `<div class="wrap">
     <div class="card">
       <h2>Script — ${esc(ch.title)}</h2>
-      <textarea class="script" id="scr" placeholder="Paste or type this chapter.\n\nPlain paragraphs are read by the Narrator.\n\nStart a line with a character's name and a colon to give it their voice, e.g.\nWorshipful Master: Brethren, assist me to open the Lodge.">${esc(ch.script || '')}</textarea>
+      <textarea class="script" id="scr" placeholder="Paste or type this chapter.\n\nPlain paragraphs are read by the Narrator.\n\nStart a line with a character's name and a colon to give it their voice, e.g.\nCaptain: All hands on deck, the storm is coming!">${esc(ch.script || '')}</textarea>
       <p class="small muted" id="scr-info">${blocks.length} line${blocks.length === 1 ? '' : 's'} · ${tts ? `${ready}/${tts} clips generated` : 'not on the timeline yet'}</p>
       <div class="btns full">
         <button class="btn p" data-s="build">Build timeline</button>
@@ -2413,6 +2447,7 @@ function renderExport(main) {
 function renderSetup(main) {
   const p = S.project, av = Engine.available();
   main.innerHTML = `<div class="wrap">
+    <div class="card"><h2>Appearance</h2>${Theme.seg()}<p class="small muted">Automatic follows your iPhone's Light/Dark setting.</p></div>
     <div class="card"><h2>Voice engine</h2>
       <select data-m="engine">
         <option value="auto" ${p.engine === 'auto' ? 'selected' : ''}>Automatic (${av.native ? 'on-device' : 'in-app web'})</option>
@@ -2449,6 +2484,7 @@ function renderSetup(main) {
     }
   };
   main.onclick = async e => {
+    if (Theme.handle(e, main)) return;
     if (e.target.closest('[data-x=backup]')) {
       const blob = new Blob([JSON.stringify(p, null, 1)], { type: 'application/json' });
       await deliver([{ blob, name: safeName(p.title) + ' backup.json' }], 'application/json');

@@ -10,15 +10,13 @@
   --hdrw: 104px;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+html.dark {
     --bg: #0f1115; --panel: #171a21; --panel2: #0f1115; --ink: #eef0f4; --muted: #9aa1ad; --line: #262a33;
     --accent: #2dd4bf; --accent-ink: #062a26; --acc-soft: #12302c; --gold: #f5b14c; --danger: #ff6b5b; --ok: #4ade80;
     --lane: #0b0c10; --lane2: #0e1014; --hdr: #12141a; --ph: #2dd4bf; --tabs: #12141a; --top: #0f1115;
     --card-bd: #262a33; --in-bd: #262a33; --r-card: 16px; --r-in: 12px; --r-btn: 12px; --r-pri: 12px;
     --clip-mix: 88%; --clip-ink: #0b0c10; --clip-shadow: none; --wave: #0b0c10; --time: #2dd4bf;
     color-scheme: dark;
-  }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
@@ -142,17 +140,15 @@ a { color: var(--accent); }
 .seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
 
 /* Studio Dark: big play dock at the bottom of the studio */
-@media (prefers-color-scheme: dark) {
-  .transport .t-main { display: none; }
-  .t-acts .btn.sm { border-radius: 18px; }
-  .dock { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 12px 10px; background: var(--bg); border-top: 1px solid var(--line); }
-  .dock .time { font-size: 20px; min-width: 0; }
-  .dock .dbtns { display: flex; align-items: center; gap: 12px; }
-  .dock .ib { width: 44px; height: 44px; border-radius: 22px; }
-  .dock .ib.big { width: 64px; height: 64px; border-radius: 32px; }
-  .dock .ib.big svg { width: 28px; height: 28px; }
-  .seg button.on { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
-}
+html.dark .transport .t-main { display: none; }
+html.dark .t-acts .btn.sm { border-radius: 18px; }
+html.dark .dock { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 12px 10px; background: var(--bg); border-top: 1px solid var(--line); }
+html.dark .dock .time { font-size: 20px; min-width: 0; }
+html.dark .dock .dbtns { display: flex; align-items: center; gap: 12px; }
+html.dark .dock .ib { width: 44px; height: 44px; border-radius: 22px; }
+html.dark .dock .ib.big { width: 64px; height: 64px; border-radius: 32px; }
+html.dark .dock .ib.big svg { width: 28px; height: 28px; }
+html.dark .seg button.on { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
 
 /* Follow-along captions */
 .captions { max-height: 210px; overflow: auto; margin-top: 10px; padding: 10px 12px; border-radius: var(--r-in); background: var(--panel2); border: 1px solid var(--in-bd); font-size: 17px; line-height: 1.6; }
@@ -167,3 +163,7 @@ a { color: var(--accent); }
 .ccbar .cseg { margin-bottom: 4px; }
 .t-acts .cc-btn { flex: none; font-weight: 800; letter-spacing: .04em; }
 .t-acts .cc-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* Appearance picker */
+.theme-seg { margin-top: 4px; }
+.top .ib.gear { margin-left: auto; }

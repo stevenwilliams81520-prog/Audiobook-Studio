@@ -642,6 +642,7 @@ function renderExport(main) {
 function renderSetup(main) {
   const p = S.project, av = Engine.available();
   main.innerHTML = `<div class="wrap">
+    <div class="card"><h2>Appearance</h2>${Theme.seg()}<p class="small muted">Automatic follows your iPhone's Light/Dark setting.</p></div>
     <div class="card"><h2>Voice engine</h2>
       <select data-m="engine">
         <option value="auto" ${p.engine === 'auto' ? 'selected' : ''}>Automatic (${av.native ? 'on-device' : 'in-app web'})</option>
@@ -678,6 +679,7 @@ function renderSetup(main) {
     }
   };
   main.onclick = async e => {
+    if (Theme.handle(e, main)) return;
     if (e.target.closest('[data-x=backup]')) {
       const blob = new Blob([JSON.stringify(p, null, 1)], { type: 'application/json' });
       await deliver([{ blob, name: safeName(p.title) + ' backup.json' }], 'application/json');

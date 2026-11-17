@@ -20,8 +20,16 @@ workflows:
       - name: Add iOS platform (first build only)
         script: |
           if [ ! -d ios ]; then npx cap add ios; fi
+      - name: Raise minimum iOS version to 15.0
+        script: &raise_ios |
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g' ios/App/App.xcodeproj/project.pbxproj
+          if [ -f ios/App/Podfile ]; then sed -i '' "s/^platform :ios, .*/platform :ios, '15.0'/" ios/App/Podfile; fi
+          if [ -f ios/App/CapApp-SPM/Package.swift ]; then sed -i '' 's/\.iOS(\.v1[0-4])/.iOS(.v15)/g' ios/App/CapApp-SPM/Package.swift; fi
+          grep -m1 "IPHONEOS_DEPLOYMENT_TARGET" ios/App/App.xcodeproj/project.pbxproj
       - name: Copy web app into iOS project
         script: npx cap sync ios
+      - name: Keep minimum iOS version at 15.0 after sync
+        script: *raise_ios
       - name: Declare no non-exempt encryption (skips the export compliance question)
         script: |
           plutil -replace ITSAppUsesNonExemptEncryption -bool NO ios/App/App/Info.plist
