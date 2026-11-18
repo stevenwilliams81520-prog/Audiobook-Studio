@@ -1,0 +1,11 @@
+{
+  "name": "capacitor-apple-tts",
+  "version": "0.1.0",
+  "description": "Apple (AVSpeechSynthesizer) speech rendered to PCM audio, for Audiobook Studio",
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Steven Williams",
+  "files": ["ios/", "Package.swift", "CapacitorAppleTts.podspec", "index.js"],
+  "peerDependencies": { "@capacitor/core": ">=7.0.0" },
+  "capacitor": { "ios": { "src": "ios" } }
+}

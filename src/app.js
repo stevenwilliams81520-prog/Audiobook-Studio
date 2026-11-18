@@ -36,7 +36,16 @@ const S = {
 const chapter = () => S.project && (S.project.chapters.find(c => c.id === S.chapterId) || S.project.chapters[0]);
 const castById = id => S.project.cast.find(c => c.id === id) || S.project.cast[0];
 const trackById = id => chapter().tracks.find(t => t.id === id);
-const genKey = cast => `${cast.voice}|${cast.speed}`;
+const genKey = cast => { const e = S.project ? S.project.engine : 'auto'; return `${Engine.kindFor(e)}|${Engine.voiceFor(e, cast)}|${cast.speed}`; };
+// mark ready clips whose voice settings no longer match as needing regeneration; returns how many
+function markStale(castId) {
+  let n = 0;
+  for (const ch of S.project.chapters) for (const cl of ch.clips) {
+    if (cl.kind !== 'tts' || cl.cut || cl.status !== 'ready' || (castId && cl.castId !== castId)) continue;
+    if (cl.genKey !== genKey(castById(cl.castId))) { cl.status = 'stale'; n++; }
+  }
+  return n;
+}
 
 /* ---------- appearance: automatic / light / dark ---------- */
 const Theme = (() => {
@@ -229,9 +238,9 @@ async function generate(clips, title) {
       const c = todo[i], cast = castById(c.castId);
       const el = (performance.now() - t0) / 1000;
       const eta = doneChars ? el / doneChars * (totalChars - doneChars) : 0;
-      Progress.set(i / todo.length, `Clip ${i + 1} of ${todo.length} · ${cast.name} (${voiceName(cast.voice)})${eta > 5 ? ` · about ${fmtLong(eta)} left` : ''}`);
+      Progress.set(i / todo.length, `Clip ${i + 1} of ${todo.length} · ${cast.name} (${Engine.voiceLabel(p.engine, cast)})${eta > 5 ? ` · about ${fmtLong(eta)} left` : ''}`);
       try {
-        const r = await Engine.synth(p.engine, c.text, cast.voice, cast.speed);
+        const r = await Engine.synth(p.engine, c.text, Engine.voiceFor(p.engine, cast), cast.speed);
         const ch = await resampleChannels([r.data], r.sr, p.sampleRate, 1);
         const id = await AudioLib.save(ch, p.sampleRate);
         const [vs, ve] = Captions.speechBounds(ch[0], p.sampleRate);
@@ -467,6 +476,11 @@ function addCast(name) {
   const used = new Set(p.cast.map(c => c.voice));
   const pickV = (VOICES.find(v => !used.has(v[0])) || VOICES[p.cast.length % VOICES.length])[0];
   const c = { id: 'v_' + uid(), name, voice: pickV, speed: 1, color: COLORS[p.cast.length % COLORS.length] };
+  // Apple voices: give each new character a different English voice where possible
+  const usedA = new Set(p.cast.map(x => Engine.voiceFor('apple', x)));
+  const rank = v => (/^en-GB/i.test(v.lang) ? 0 : 1) * 10 + ({ premium: 0, enhanced: 1 }[v.q] ?? 2);
+  const freeA = Engine.appleVoices.filter(v => /^en-/i.test(v.lang) && !usedA.has(v.id) && !/eloquence|speech\.synthesis\.|novelty/i.test(v.id)).sort((x, y) => rank(x) - rank(y))[0];
+  if (freeA) c.appleVoice = freeA.id;
   p.cast.push(c); return c;
 }
 function voiceOptions(sel) {
@@ -476,12 +490,13 @@ function voiceOptions(sel) {
 }
 function renderCast(main) {
   const p = S.project;
+  if (Engine.kindFor(p.engine) === 'apple' && !Engine.appleVoices.length) Engine.loadApple().then(() => { if (S.tab === 'cast') render(); }).catch(() => {});
   main.innerHTML = `<div class="wrap">
     <div class="card"><h2>Voices</h2>
       <p class="small muted">Each character has a voice and speed. In the script, start a line with the character's name and a colon. The first entry reads any untagged text.</p>
       ${p.cast.map((c, i) => `<div class="cast-item" style="--c:${c.color}" data-c="${c.id}">
         <div class="full"><label class="f" style="margin-top:0">Name ${i === 0 ? '<span class="pill">reads untagged text</span>' : ''}</label><input type="text" data-k="name" value="${esc(c.name)}"></div>
-        <div><label class="f">Voice</label><select data-k="voice">${voiceOptions(c.voice)}</select></div>
+        <div><label class="f">Voice</label><select data-k="voice">${voiceOptionsFor(p.engine, c)}</select></div>
         <div><label class="f">Speed <span class="rangev">${c.speed.toFixed(2)}×</span></label><input type="range" min="0.6" max="1.5" step="0.05" value="${c.speed}" data-k="speed"></div>
         <div class="full btns" style="margin-top:4px"><button class="btn sm" data-x="hear">Hear sample</button>${i > 0 ? '<button class="btn sm d" data-x="del">Remove</button>' : ''}</div>
       </div>`).join('')}
@@ -497,9 +512,10 @@ function renderCast(main) {
     mutate(() => {
       if (k === 'name') { c.name = e.target.value.trim() || c.name; for (const ch of p.chapters) for (const t of ch.tracks) if (t.castId === c.id) t.name = c.name; }
       if (k === 'voice' || k === 'speed') {
-        c[k] = k === 'speed' ? Number(e.target.value) : e.target.value;
-        let n = 0;
-        for (const ch of p.chapters) for (const cl of ch.clips) if (cl.castId === c.id && cl.status === 'ready' && !cl.cut) { cl.status = 'stale'; n++; }
+        if (k === 'speed') c.speed = Number(e.target.value);
+        else if (Engine.kindFor(p.engine) === 'apple') c.appleVoice = e.target.value;
+        else c.voice = e.target.value;
+        const n = markStale(c.id);
         if (n) toast(`${n} ${c.name} clip${n === 1 ? '' : 's'} will be regenerated next time you generate.`);
       }
     }, { render: k !== 'name' });
@@ -526,7 +542,7 @@ function renderCast(main) {
         const sample = `Hello, I'm ${c.name}. This is how I sound reading your book.`;
         await Engine.ensure(p.engine, (f, m) => { b.textContent = Math.round(f * 100) + '%'; });
         b.textContent = 'Speaking…';
-        const r = await Engine.synth(p.engine, sample, c.voice, c.speed);
+        const r = await Engine.synth(p.engine, sample, Engine.voiceFor(p.engine, c), c.speed);
         await Player.playRaw([r.data], r.sr);
       } catch (err) { ask('Voice engine problem', esc(err.message || err), [{ label: 'OK', primary: true }]); }
       b.disabled = false; b.textContent = old;

@@ -40,22 +40,46 @@ const Engine = (() => {
   let kind = null, impl = null, loading = null;
   const forced = new URLSearchParams(location.search).get('engine');
   const nativePlugin = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KokoroTTS;
+  const applePlugin = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AppleTTS;
+  let appleList = null;
 
+  // auto = Apple voices when the iPhone app has them, else Kokoro (native, then in-app)
   function pick(pref) {
     if (forced) return forced;
+    if (pref === 'apple' && !applePlugin()) pref = 'auto';
+    if (pref === 'native' && !nativePlugin()) pref = 'auto';
     if (pref && pref !== 'auto') return pref;
-    return nativePlugin() ? 'native' : 'web';
+    return applePlugin() ? 'apple' : nativePlugin() ? 'native' : 'web';
+  }
+  function pcm16(r) {
+    const bin = atob(r.pcm16), n = bin.length >> 1, f = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8); if (v >= 32768) v -= 65536; f[i] = v / 32768; }
+    return { sr: r.sampleRate, data: f };
+  }
+  async function loadApple() {
+    if (appleList) return appleList;
+    const r = await applePlugin().voices();
+    appleList = (r.voices || []).map(v => ({ id: v.id, name: v.name, lang: v.language || '', q: v.quality || 'default' }));
+    return appleList;
+  }
+  const QRANK = { premium: 3, enhanced: 2, default: 1 };
+  function bestApple(lang) {
+    const L = (appleList || []).filter(v => v.lang.toLowerCase().startsWith(lang.toLowerCase()) && !/eloquence|novelty/i.test(v.id));
+    L.sort((a, b) => (QRANK[b.q] || 0) - (QRANK[a.q] || 0));
+    return L[0];
   }
 
   const engines = {
+    apple: {
+      label: 'Apple voices',
+      async load() { await loadApple(); return {}; },
+      async synth(text, voice, speed) { return pcm16(await applePlugin().synthesize({ text, voice, rate: speed })); }
+    },
     native: {
       label: 'On-device (native)',
       async load() { const r = await nativePlugin().load(); return r; },
       async synth(text, voice, speed) {
-        const r = await nativePlugin().synthesize({ text, voice, speed });
-        const bin = atob(r.pcm16), n = bin.length >> 1, f = new Float32Array(n);
-        for (let i = 0; i < n; i++) { let v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8); if (v >= 32768) v -= 65536; f[i] = v / 32768; }
-        return { sr: r.sampleRate, data: f };
+        return pcm16(await nativePlugin().synthesize({ text, voice, speed }));
       }
     },
     web: {
@@ -110,7 +134,21 @@ const Engine = (() => {
   return {
     get kind() { return kind; },
     label(k) { return (engines[k || kind] || {}).label || ''; },
-    available() { return { native: !!nativePlugin(), web: true, mock: true }; },
+    available() { return { apple: !!applePlugin(), native: !!nativePlugin(), web: true, mock: true }; },
+    kindFor: pick,
+    loadApple,
+    get appleVoices() { return appleList || []; },
+    // the voice id to use for a cast member / quick speech settings under a given engine
+    voiceFor(pref, ent) {
+      if (pick(pref) !== 'apple') return ent.voice;
+      if (ent.appleVoice && (appleList || []).some(v => v.id === ent.appleVoice)) return ent.appleVoice;
+      const b = bestApple('en-GB') || bestApple('en'); return b ? b.id : '';
+    },
+    voiceLabel(pref, ent) {
+      if (pick(pref) !== 'apple') return voiceName(ent.voice);
+      const id = this.voiceFor(pref, ent), v = (appleList || []).find(x => x.id === id);
+      return v ? v.name : 'Apple voice';
+    },
     async ensure(pref, onProgress) {
       const k = pick(pref);
       if (kind === k && impl) return impl;
@@ -119,9 +157,31 @@ const Engine = (() => {
       loading = { k, p: (async () => { await e.load(onProgress); kind = k; impl = e; loading = null; return e; })() };
       try { return await loading.p; } catch (err) { loading = null; throw err; }
     },
+    get kindNow() { return kind; },
     async synth(pref, text, voice, speed, onProgress) {
       const e = await this.ensure(pref, onProgress);
       return e.synth(text, voice, speed);
     }
   };
 })();
+
+/* Voice picker options for whichever engine is in use */
+const LANG_NAMES = (() => { try { return new Intl.DisplayNames(['en-GB'], { type: 'language' }); } catch { return null; } })();
+const REGION_NAMES = (() => { try { return new Intl.DisplayNames(['en-GB'], { type: 'region' }); } catch { return null; } })();
+function langLabel(code) {
+  const [l, r] = String(code).split('-');
+  const ln = LANG_NAMES ? LANG_NAMES.of(l) : l;
+  const rn = r && REGION_NAMES ? REGION_NAMES.of(r.toUpperCase()) : r;
+  return rn ? `${ln} (${rn})` : ln;
+}
+function voiceOptionsFor(pref, ent) {
+  if (Engine.kindFor(pref) !== 'apple') return voiceOptions(ent.voice);
+  const sel = Engine.voiceFor(pref, ent), list = Engine.appleVoices;
+  if (!list.length) return `<option value="">Loading voices…</option>`;
+  const groups = new Map();
+  const order = l => /^en-GB/i.test(l) ? 0 : /^en-/i.test(l) ? 1 : /^cy/i.test(l) ? 2 : 3;
+  [...list].sort((a, b) => order(a.lang) - order(b.lang) || a.lang.localeCompare(b.lang) || (({ premium: 0, enhanced: 1 })[a.q] ?? 2) - (({ premium: 0, enhanced: 1 })[b.q] ?? 2) || a.name.localeCompare(b.name))
+    .filter(v => !/eloquence|speech\.synthesis\.|novelty/i.test(v.id))
+    .forEach(v => { const g = langLabel(v.lang); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(`<option value="${esc(v.id)}" ${v.id === sel ? 'selected' : ''}>${esc(v.name)}${v.q === 'premium' ? ' (Premium)' : v.q === 'enhanced' ? ' (Enhanced)' : ''}</option>`); });
+  return [...groups].map(([g, o]) => `<optgroup label="${esc(g)}">${o.join('')}</optgroup>`).join('');
+}

@@ -15,6 +15,7 @@ Home page: **Quick speech** (text → one MP3/M4A/WAV) and **Projects** (chapter
 4. Start the "iOS TestFlight" workflow. The first build creates the `ios/` project automatically.
 
 ## Voice engines
+- **apple** (default in the iPhone app) – Apple's built-in voices via the local plugin in `plugins/apple-tts` (Swift, AVSpeechSynthesizer.write). Fast, offline. Enhanced/Premium voices: Settings › Accessibility › Spoken Content › Voices.
 - **web** – kokoro-js inside the app (works now; downloads ~90 MB once; slower).
 - **native** – Capacitor plugin `KokoroTTS` (next phase, sherpa-onnx). Used automatically when present.
   Contract: `load() -> {sampleRate, voices}`, `synthesize({text, voice, speed}) -> {sampleRate, pcm16 (base64 Int16 LE mono)}`.

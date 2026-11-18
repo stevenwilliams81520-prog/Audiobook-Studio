@@ -7,7 +7,7 @@ const Quick = (() => {
   const st = Object.assign({ text: '', voice: 'bm_george', speed: 1, fmt: 'mp3', bitrate: 96, name: '', engine: 'auto', open: true, follow: true, capMode: '' }, store.get());
   if (!st.capMode) st.capMode = st.follow === false ? 'off' : 'text';
   let result = null; // { blob, url, name, secs }
-  const persist = () => store.set({ text: st.text, voice: st.voice, speed: st.speed, fmt: st.fmt, bitrate: st.bitrate, name: st.name, engine: st.engine, open: st.open, capMode: st.capMode });
+  const persist = () => store.set({ text: st.text, voice: st.voice, speed: st.speed, fmt: st.fmt, bitrate: st.bitrate, name: st.name, engine: st.engine, appleVoice: st.appleVoice, open: st.open, capMode: st.capMode });
   const QFMT = { mp3: 'MP3', m4a: 'M4A', wav: 'WAV' };
 
   function html() {
@@ -20,7 +20,8 @@ const Quick = (() => {
         <textarea id="q-text" style="margin-top:10px;min-height:150px" placeholder="Type or paste text…">${esc(st.text)}</textarea>
         <div class="small muted" id="q-count" style="text-align:right">${st.text.length.toLocaleString()} characters</div>
         <div class="group">
-          <label class="qrow"><span>Voice</span><select id="q-voice" class="gsel">${voiceOptions(st.voice)}</select></label>
+          ${Engine.available().apple ? `<label class="qrow"><span>Voices</span><select id="q-eng" class="gsel"><option value="apple" ${Engine.kindFor(st.engine) === 'apple' ? 'selected' : ''}>Apple (fast)</option><option value="web" ${Engine.kindFor(st.engine) !== 'apple' ? 'selected' : ''}>Kokoro (natural, slower)</option></select></label>` : ''}
+          <label class="qrow"><span>Voice</span><select id="q-voice" class="gsel">${voiceOptionsFor(st.engine, st)}</select></label>
           <label class="qrow"><span>Speed</span><input type="range" id="q-speed" min="0.6" max="1.5" step="0.05" value="${st.speed}"><span class="gval" id="q-sv">${Number(st.speed).toFixed(2)}×</span></label>
           <label class="qrow"><span>File name</span><input type="text" id="q-name" class="gin" value="${esc(st.name)}" placeholder="speech"></label>
           <label class="qrow"><span>Quality</span><select id="q-br" class="gsel" ${st.fmt === 'wav' ? 'disabled' : ''}>${[64, 96, 128].map(b => `<option value="${b}" ${st.bitrate === b ? 'selected' : ''}>${b} kbps</option>`).join('')}</select></label>
@@ -48,7 +49,9 @@ const Quick = (() => {
     const q = id => $('#' + id, root);
     if (!q('q-text')) return;
     q('q-text').oninput = e => { st.text = e.target.value; q('q-count').textContent = st.text.length.toLocaleString() + ' characters'; persist(); };
-    q('q-voice').onchange = e => { st.voice = e.target.value; persist(); };
+    q('q-voice').onchange = e => { if (Engine.kindFor(st.engine) === 'apple') st.appleVoice = e.target.value; else st.voice = e.target.value; persist(); };
+    if (q('q-eng')) q('q-eng').onchange = e => { st.engine = e.target.value; persist(); q('q-voice').innerHTML = voiceOptionsFor(st.engine, st); };
+    if (Engine.kindFor(st.engine) === 'apple' && !Engine.appleVoices.length) Engine.loadApple().then(() => { const s = q('q-voice'); if (s) s.innerHTML = voiceOptionsFor(st.engine, st); }).catch(() => {});
     q('q-speed').oninput = e => { st.speed = Number(e.target.value); q('q-sv').textContent = st.speed.toFixed(2) + '×'; persist(); };
     q('q-name').oninput = e => { st.name = e.target.value; persist(); };
     q('q-br').onchange = e => { st.bitrate = Number(e.target.value); persist(); };
@@ -96,7 +99,7 @@ const Quick = (() => {
         try {
           await Engine.ensure(st.engine, f => { b.textContent = Math.round(f * 100) + '%'; });
           b.textContent = 'Speaking…';
-          const r = await Engine.synth(st.engine, `Hello, this is ${voiceName(st.voice)}.`, st.voice, st.speed);
+          const r = await Engine.synth(st.engine, `Hello, this is ${Engine.voiceLabel(st.engine, st)}.`, Engine.voiceFor(st.engine, st), st.speed);
           await Player.playRaw([r.data], r.sr);
         } catch (err) { ask('Voice engine problem', esc(err.message || err), [{ label: 'OK', primary: true }]); }
         b.disabled = false; b.textContent = old; break;
@@ -116,7 +119,7 @@ const Quick = (() => {
       case 'save': if (result) await deliver([{ blob: result.blob, name: result.name }], result.blob.type); break;
       case 'toproject': {
         const p = newProject(st.name.trim() || 'Quick speech');
-        p.cast[0].voice = st.voice; p.cast[0].speed = st.speed;
+        p.cast[0].voice = st.voice; p.cast[0].appleVoice = st.appleVoice; p.cast[0].speed = st.speed; p.engine = st.engine === 'auto' ? 'auto' : st.engine;
         p.chapters[0].script = st.text;
         await DB.put('projects', p);
         await openProject(p.id, 'script');
@@ -144,7 +147,7 @@ const Quick = (() => {
         if (Progress.cancelled) throw new Error('Cancelled');
         const el = (performance.now() - t0) / 1000, eta = done ? el / done * (total - done) : 0;
         Progress.set(i / pieces.length, `Speaking part ${i + 1} of ${pieces.length}${eta > 5 ? ` · about ${fmtLong(eta)} left` : ''}`);
-        const r = await Engine.synth(st.engine, pieces[i].text, st.voice, st.speed);
+        const r = await Engine.synth(st.engine, pieces[i].text, Engine.voiceFor(st.engine, st), st.speed);
         const [data] = await resampleChannels([r.data], r.sr, sr, 1);
         const gap = new Float32Array(Math.round(pieces[i].gap * sr));
         const [vs, ve] = Captions.speechBounds(data, sr);
@@ -154,7 +157,7 @@ const Quick = (() => {
       }
       Progress.set(1, 'Finishing file…');
       const name = safeName(st.name.trim() || text.slice(0, 40)) + '.' + st.fmt;
-      const blob = await enc.finish({ title: st.name.trim() || text.slice(0, 60), artist: voiceName(st.voice), genre: 'Speech' }, null);
+      const blob = await enc.finish({ title: st.name.trim() || text.slice(0, 60), artist: Engine.voiceLabel(st.engine, st), genre: 'Speech' }, null);
       if (result) URL.revokeObjectURL(result.url);
       result = { blob, url: URL.createObjectURL(blob), name, secs: frames / sr, segs };
       window.__lastQuick = result;

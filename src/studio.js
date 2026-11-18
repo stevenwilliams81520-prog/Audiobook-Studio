@@ -664,9 +664,10 @@ function renderSetup(main) {
     <div class="card"><h2>Appearance</h2>${Theme.seg()}<p class="small muted">Automatic follows your iPhone's Light/Dark setting.</p></div>
     <div class="card"><h2>Voice engine</h2>
       <select data-m="engine">
-        <option value="auto" ${p.engine === 'auto' ? 'selected' : ''}>Automatic (${av.native ? 'on-device' : 'in-app web'})</option>
+        <option value="auto" ${p.engine === 'auto' ? 'selected' : ''}>Automatic (${av.apple ? 'Apple voices' : av.native ? 'on-device' : 'in-app web'})</option>
+        <option value="apple" ${p.engine === 'apple' ? 'selected' : ''} ${av.apple ? '' : 'disabled'}>Apple voices — fast${av.apple ? '' : ' (iPhone app only)'}</option>
         <option value="native" ${p.engine === 'native' ? 'selected' : ''} ${av.native ? '' : 'disabled'}>On-device native${av.native ? '' : ' — iPhone app only'}</option>
-        <option value="web" ${p.engine === 'web' ? 'selected' : ''}>In-app web (downloads ~90 MB once, slower)</option>
+        <option value="web" ${p.engine === 'web' ? 'selected' : ''}>Kokoro in-app — more natural, slower (downloads ~90 MB once)</option>
         <option value="mock" ${p.engine === 'mock' ? 'selected' : ''}>Test tones (no voice, for trying the editor)</option>
       </select>
       <p class="small muted">Changing engine doesn't change existing audio. Regenerate clips to hear the difference.</p>
@@ -685,7 +686,14 @@ function renderSetup(main) {
     </div></div>`;
   main.onchange = async e => {
     const k = e.target.dataset.m;
-    if (k) return mutate(() => { p[k] = k === 'engine' ? e.target.value : Number(e.target.value); }, { render: false });
+    if (k === 'engine') {
+      let n = 0;
+      mutate(() => { p.engine = e.target.value; n = markStale(); }, { render: false });
+      if (Engine.kindFor(p.engine) === 'apple') Engine.loadApple().catch(() => {});
+      if (n) toast(`${n} clip${n === 1 ? '' : 's'} will use the new voices next time you generate.`);
+      return;
+    }
+    if (k) return mutate(() => { p[k] = Number(e.target.value); }, { render: false });
     if (e.target.id === 'rest') {
       try {
         const j = JSON.parse(await e.target.files[0].text());
@@ -709,4 +717,5 @@ function renderSetup(main) {
 /* ===== Boot ===== */
 window.addEventListener('pointerdown', () => { try { Player.ensure(); } catch {} }, { once: true });
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(true); });
+if (Engine.available().apple) Engine.loadApple().then(() => { if (S.view === 'home') render(); }).catch(() => {});
 render();
